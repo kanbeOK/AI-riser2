@@ -1,0 +1,6 @@
+{
+  "name": "PHANH!",
+  "description": "AI Social-Engineering Flight Simulator for Vietnam. Dính bẫy giả. Né mất tiền thật.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,18 @@
+@import "tailwindcss";
+@import "tailwindcss/theme" theme(reference);
+
+@theme {
+  --color-ink: #1A1A1A;
+  --color-paper: #FAF9F6;
+  --color-surface: #FAF9F6;
+  --color-surface-alt: #E5E3DF;
+  --color-danger: #8B0000;
+  --color-warning: #B8860B;
+  --color-safe: #2F4F4F;
+  --color-learn: #E5E3DF;
+  --color-muted: color-mix(in srgb, #1A1A1A 60%, transparent);
+  --color-border: color-mix(in srgb, #1A1A1A 10%, transparent);
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+}
+

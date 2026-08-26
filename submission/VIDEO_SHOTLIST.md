@@ -1,0 +1,8 @@
+- Góc máy tĩnh, quay màn hình chất lượng HD.
+- 0:00: Intro màn hình chính Landing Page.
+- 0:28: Onboarding chọn profile.
+- 0:40: Trải nghiệm kịch bản giả lập (Mission Play).
+- 1:05: X-Quang hiển thị điểm nhấn (đỏ/xanh).
+- 1:28: Chức năng Kiểm tra nhanh (paste text).
+- 1:52: Trang Tác động thực tế (Impact Dashboard).
+- 2:45: Link chia sẻ ở cuối.
