@@ -85,17 +85,40 @@ export function gameReducer(state: CampaignState, action: GameAction): CampaignS
           ...state.cases,
           [action.payload.id]: { id: action.payload.id, title: action.payload.title, status: "open", evidenceIds: [], verdict: null }
         },
-        notifications: [...state.notifications, { id: `notif_${Date.now()}`, time: state.minuteOfDay, message: `Hồ sơ mới được tạo: ${action.payload.title}`, type: "info" }]
+        notifications: [...state.notifications, { id: `notif_${state.day}_${state.minuteOfDay}_${state.notifications.length}`, time: state.minuteOfDay, message: `Hồ sơ mới được tạo: ${action.payload.title}`, type: "info" }]
       };
     }
     case "START_CAMPAIGN": {
-      const seed = action.payload.seed || Date.now().toString();
+      const seed = action.payload.seed || Math.random().toString(36).substring(2, 9);
+      const isDemo = action.payload.mode === "demo";
+      
+      let scheduledEvents: ScheduledEvent[] = [];
+      
+      if (isDemo) {
+        // Demo starts immediately with 2 feeds active
+        scheduledEvents.push(
+          { id: "demo_start_1", day: 1, minute: 7 * 60, type: "feed_start" as const, payload: { feedId: "c1_qr_delivery", title: "Mã QR Giao hàng", type: "chat" as const } },
+          { id: "demo_msg_1", day: 1, minute: 7 * 60 + 1, type: "feed_message" as const, payload: { feedId: "c1_qr_delivery", message: { id: "m_demo_1", senderId: "scammer", senderName: "Shipper Giao Hàng Nhanh", text: "Chào bạn, tôi là shipper. Bạn có đơn hàng 250k. Vui lòng quét mã QR này để thanh toán vì tôi đang vội.", timestamp: 7 * 60 + 1, clues: ["mã QR này", "đang vội"] } } },
+          { id: "demo_start_2", day: 1, minute: 7 * 60, type: "feed_start" as const, payload: { feedId: "c3_bank_impersonation", title: "Mạo danh ngân hàng", type: "call" as const } },
+          { id: "demo_msg_2", day: 1, minute: 7 * 60 + 1, type: "feed_message" as const, payload: { feedId: "c3_bank_impersonation", message: { id: "m_demo_2", senderId: "scammer", senderName: "0287300xxxx", text: "Tài khoản của anh/chị vừa bị trừ 5 triệu. Đọc mã OTP gửi về máy để hủy giao dịch.", timestamp: 7 * 60 + 1, clues: ["đọc mã OTP", "bị trừ 5 triệu"] } } }
+        );
+      } else {
+        // Solo mode schedules first feed very soon (in 1-2 in-game minutes)
+        scheduledEvents.push(
+          { id: "solo_start_1", day: 1, minute: 7 * 60 + 3, type: "feed_start" as const, payload: { feedId: "c1_qr_delivery", title: "Mã QR Giao hàng", type: "chat" as const } },
+          { id: "solo_msg_1", day: 1, minute: 7 * 60 + 4, type: "feed_message" as const, payload: { feedId: "c1_qr_delivery", message: { id: "m_solo_1", senderId: "scammer", senderName: "Shipper Giao Hàng Nhanh", text: "Chào bạn, tôi là shipper. Bạn có đơn hàng 250k. Vui lòng quét mã QR này để thanh toán vì tôi đang vội.", timestamp: 7 * 60 + 4, clues: ["mã QR này", "đang vội"] } } }
+        );
+      }
+      
       return {
         ...INITIAL_STATE,
         seed,
         mode: action.payload.mode,
         internetPaidThroughDay: 0,
-        status: "playing"
+        status: "playing",
+        location: isDemo ? "workstation" : "apartment",
+        speed: isDemo ? 0 : 0,
+        scheduledEvents
       };
     }
     case "SET_SPEED": {
@@ -248,7 +271,7 @@ export function gameReducer(state: CampaignState, action: GameAction): CampaignS
           ...state,
           credits: state.credits + state.activeSideJob.reward,
           activeSideJob: null,
-          notifications: [...state.notifications, { id: `job_${Date.now()}`, time: state.minuteOfDay, message: `Hoàn thành công việc: +${state.activeSideJob.reward} CR`, type: "success" }]
+          notifications: [...state.notifications, { id: `job_${state.day}_${state.minuteOfDay}_${state.notifications.length}`, time: state.minuteOfDay, message: `Hoàn thành công việc: +${state.activeSideJob.reward} CR`, type: "success" }]
         };
       }
       return {
@@ -260,6 +283,13 @@ export function gameReducer(state: CampaignState, action: GameAction): CampaignS
       const { caseId, action: opAction } = action.payload;
       const c = state.cases[caseId];
       if (!c) return state;
+      
+      let ending = state.status;
+      let speed = state.speed;
+      if (state.mode === 'demo') {
+         ending = 'debrief';
+         speed = 0;
+      }
       
       // Simple resolution logic for now
       let trustDelta = 0;

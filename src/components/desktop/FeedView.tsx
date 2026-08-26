@@ -3,6 +3,7 @@ import { CampaignState, GameAction, FeedState } from '../../game/state/types';
 
 export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: React.Dispatch<GameAction> }) {
   const [inputText, setInputText] = useState("");
+  const [loadingFeeds, setLoadingFeeds] = useState<Record<string, boolean>>({});
 
   const formatTime = (minutes: number) => {
     const h = Math.floor(minutes / 60).toString().padStart(2, '0');
@@ -10,12 +11,17 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
     return `${h}:${m}`;
   };
 
-  const handleSend = (feedId: string) => {
-    if (!inputText.trim()) return;
+  const handleSend = async (feedId: string) => {
+    if (!inputText.trim() || loadingFeeds[feedId]) return;
+    
+    const feed = state.feeds[feedId];
+    if (!feed) return;
+
+    const msgId = `m_${state.day}_${state.minuteOfDay}_${feed.messages.length}`;
     
     // Add player message
     const msg = {
-      id: `m_${Date.now()}`,
+      id: msgId,
       senderId: 'player',
       senderName: 'Bạn',
       text: inputText,
@@ -23,39 +29,84 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
       clues: []
     };
     
-    dispatch({ type: 'PROCESS_EVENT', payload: { event: { id: `evt_${Date.now()}`, day: state.day, minute: state.minuteOfDay, type: 'feed_message', payload: { feedId, message: msg } } } });
+    dispatch({ type: 'PROCESS_EVENT', payload: { event: { id: `evt_${msgId}`, day: state.day, minute: state.minuteOfDay, type: 'feed_message', payload: { feedId, message: msg } } } });
+    
+    const currentInput = inputText;
     setInputText("");
+    setLoadingFeeds(prev => ({ ...prev, [feedId]: true }));
     
-    // In a real implementation, this would call /api/scenarios/turn to get a response
-    // For now, let's simulate a response delay
-    const responseEventId = `resp_${Date.now()}`;
-    const triggerMin = state.minuteOfDay + 2;
-    
-    // We can dispatch an event to the future queue
-    // Note: The current reducer handles PROCESS_EVENT immediately. 
-    // To schedule it, we could add a SCHEDULE_EVENT action, but for brevity we'll just push to the state via a custom action or modify it.
-    // Let's implement a simple direct timeout for now to simulate network:
-    setTimeout(() => {
+    try {
+      const history = feed.messages.map(m => ({
+        role: m.senderId === 'player' ? 'user' : 'model',
+        parts: [{ text: m.text }]
+      }));
+      
+      const response = await fetch('/api/scenarios/turn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenarioId: feed.id,
+          userMessage: currentInput,
+          history
+        })
+      });
+      
+      if (!response.ok) throw new Error('API error');
+      
+      const data = await response.json();
+      
+      const triggerMin = state.minuteOfDay + 1;
+      const respId = `m_${state.day}_${triggerMin}_sys_${Math.floor(Math.random()*1000)}`;
+      
+      const newClues = data.newClueId ? [data.newClueId] : [];
+      
       dispatch({ type: 'PROCESS_EVENT', payload: { 
         event: { 
-          id: responseEventId, 
+          id: `evt_${respId}`, 
           day: state.day, 
           minute: triggerMin, 
           type: 'feed_message', 
           payload: { 
             feedId, 
             message: {
-               id: `m_${Date.now()}`,
-               senderId: 'system',
-               senderName: 'Hệ thống (Giả lập)',
-               text: "Tính năng trò chuyện đang kết nối API...",
+               id: respId,
+               senderId: 'scammer',
+               senderName: 'Đối tượng',
+               text: data.message,
+               timestamp: triggerMin,
+               clues: newClues
+            } 
+          } 
+        } 
+      }});
+      
+    } catch (e) {
+      console.error(e);
+      // Fallback
+      const triggerMin = state.minuteOfDay + 1;
+      const respId = `m_${state.day}_${triggerMin}_sys_err`;
+      dispatch({ type: 'PROCESS_EVENT', payload: { 
+        event: { 
+          id: `evt_${respId}`, 
+          day: state.day, 
+          minute: triggerMin, 
+          type: 'feed_message', 
+          payload: { 
+            feedId, 
+            message: {
+               id: respId,
+               senderId: 'scammer',
+               senderName: 'Đối tượng',
+               text: "Mạng đang chậm, nhanh tay chuyển khoản hoặc gửi thông tin đi bạn!",
                timestamp: triggerMin,
                clues: []
             } 
           } 
         } 
       }});
-    }, 1000);
+    } finally {
+      setLoadingFeeds(prev => ({ ...prev, [feedId]: false }));
+    }
   };
 
   return (
@@ -100,7 +151,7 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
                               type: 'EXTRACT_EVIDENCE',
                               payload: {
                                 token: {
-                                  id: `ev_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+                                  id: `ev_${feed.id}_${m.id}_${c.replace(/\s+/g, "")}`,
                                   caseId: null,
                                   feedId: feed.id,
                                   eventId: m.id,
@@ -128,6 +179,18 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
                    Kênh đã mở kết nối an toàn.
                  </div>
                )}
+               {loadingFeeds[feed.id] && (
+                 <div className="flex flex-col text-sm max-w-[80%]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-[#86949B]">Đối tượng</span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[#172127] border border-[#2A363D] text-[#86949B] flex gap-1">
+                      <span className="animate-bounce">.</span>
+                      <span className="animate-bounce delay-100">.</span>
+                      <span className="animate-bounce delay-200">.</span>
+                    </div>
+                 </div>
+               )}
             </div>
             
             {feed.status === 'active' && (
@@ -138,10 +201,11 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend(feed.id)}
-                    className="flex-1 bg-[#11171C] border border-[#2A363D] rounded px-3 py-2 text-sm text-[#E9EEE9] focus:outline-none focus:border-[#45D6BF]"
+                    disabled={loadingFeeds[feed.id]}
+                    className="flex-1 bg-[#11171C] border border-[#2A363D] rounded px-3 py-2 text-sm text-[#E9EEE9] focus:outline-none focus:border-[#45D6BF] disabled:opacity-50"
                     placeholder="Nhập tin nhắn..."
                   />
-                  <button onClick={() => handleSend(feed.id)} className="px-4 py-2 bg-[#45D6BF] text-[#080B0E] font-bold rounded text-sm hover:bg-[#6DA8FF] transition-colors">
+                  <button disabled={loadingFeeds[feed.id]} onClick={() => handleSend(feed.id)} className="px-4 py-2 bg-[#45D6BF] text-[#080B0E] font-bold rounded text-sm hover:bg-[#6DA8FF] transition-colors disabled:opacity-50">
                     Gửi
                   </button>
                 </div>

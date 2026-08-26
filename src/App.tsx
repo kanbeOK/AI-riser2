@@ -56,16 +56,39 @@ function GameRoot() {
     return () => window.removeEventListener('blur', handleBlur);
   }, [state.status, state.speed]);
 
+  
   if (state.status === 'debrief') {
     return (
-      <div className="min-h-screen bg-[#071018] text-white flex flex-col items-center justify-center p-8">
-        <h1 className="text-4xl font-bold mb-8">Báo cáo kết thúc</h1>
-        <div className="text-gray-400 mb-8 max-w-lg text-center">
-          {state.endingsUnlocked.includes('e_nguoi_tot_khong_nha') && "Bạn đã bảo vệ được nhiều người, nhưng lại không thể trả tiền nhà. Bạn bị đuổi khỏi căn hộ."}
-          {state.endingsUnlocked.includes('e_kiet_suc') && "Bạn đã sụp đổ vì kiệt sức. Sức khỏe là vốn quý nhất, đừng bỏ bê nó."}
-          {!state.endingsUnlocked.length && "Ca trực kết thúc."}
+      <div className="min-h-screen bg-[#071018] text-white flex flex-col items-center p-8 overflow-y-auto">
+        <h1 className="text-4xl font-bold mb-4 font-serif text-[#45D6BF]">BÁO CÁO MẮT LƯỚI</h1>
+        
+        <div className="w-full max-w-2xl bg-[#11171C] border border-[#2A363D] p-6 rounded-xl mb-8 font-mono">
+          <h2 className="text-xl mb-4 border-b border-[#2A363D] pb-2 text-[#F2B35D]">X-RAY: KẾT QUẢ CÁC VỤ ÁN</h2>
+          {Object.values(state.cases).length === 0 ? (
+             <p className="text-[#86949B]">Không có hồ sơ nào được ghi nhận.</p>
+          ) : Object.values(state.cases).map(c => (
+             <div key={c.id} className="mb-4 bg-[#172127] p-4 rounded">
+                <div className="flex justify-between mb-2">
+                   <strong className="text-white">{c.title}</strong>
+                   <span className={`text-xs px-2 py-1 rounded font-bold ${c.verdict === 'warned' ? 'bg-[#45D6BF] text-[#080B0E]' : c.verdict === 'frozen' ? 'bg-[#F2B35D] text-[#080B0E]' : c.verdict === 'banned' ? 'bg-[#FF5A5F] text-[#080B0E]' : 'bg-[#2A363D] text-[#86949B]'}`}>
+                     {c.verdict ? c.verdict.toUpperCase() : 'CHƯA XỬ LÝ'}
+                   </span>
+                </div>
+                <div className="text-sm text-[#86949B]">
+                   Bằng chứng thu thập: {c.evidenceIds.length} <br/>
+                   {c.verdict ? 'Nạn nhân được bảo vệ hoặc tài khoản bị khóa kịp thời.' : 'Kẻ gian đã tẩu thoát do thiếu sự can thiệp.'}
+                </div>
+             </div>
+          ))}
         </div>
-        <Link to="/" className="px-6 py-3 bg-[#45D6BF] text-[#080B0E] font-bold rounded">Về trang chủ</Link>
+
+        <div className="text-gray-400 mb-8 max-w-lg text-center font-serif text-xl">
+          {state.endingsUnlocked.includes('e_nguoi_tot_khong_nha') && <div className="mb-2 text-[#FF5A5F]">Bạn đã bị đuổi khỏi căn hộ vì nợ tiền nhà.</div>}
+          {state.endingsUnlocked.includes('e_kiet_suc') && <div className="mb-2 text-[#FF5A5F]">Bạn đã sụp đổ vì kiệt sức. Sức khỏe là vốn quý nhất.</div>}
+          {!state.endingsUnlocked.length && "Ca trực kết thúc an toàn. Chúc ngủ ngon."}
+        </div>
+        
+        <Link to="/" onClick={() => window.location.href = '/'} className="px-8 py-4 bg-[#45D6BF] text-[#080B0E] font-bold rounded hover:bg-white transition-colors tracking-widest uppercase text-xs">TRỞ VỀ MENU</Link>
       </div>
     );
   }
@@ -73,7 +96,6 @@ function GameRoot() {
   if (state.location === 'apartment') {
     return <Apartment state={state} dispatch={dispatch} />;
   }
-
   return <Workstation state={state} dispatch={dispatch} />;
 }
 

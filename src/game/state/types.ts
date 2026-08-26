@@ -70,13 +70,13 @@ export type VictimState = {
   status: "safe" | "at_risk" | "scammed";
 };
 
-export type ScheduledEvent = {
-  id: string;
-  day: number;
-  minute: number;
-  type: "feed_message" | "feed_start" | "feed_close" | "bill_due" | "job_offer" | "network_activity";
-  payload: any; // We'll type this better
-};
+export type ScheduledEvent = 
+  | { id: string; day: number; minute: number; type: "feed_start"; payload: { feedId: string; title: string; type: "chat" | "call" | "transaction" | "social" } }
+  | { id: string; day: number; minute: number; type: "feed_message"; payload: { feedId: string; message: FeedMessage } }
+  | { id: string; day: number; minute: number; type: "feed_close"; payload: { feedId: string } }
+  | { id: string; day: number; minute: number; type: "bill_due"; payload: { type: "rent" | "internet"; amount: number } }
+  | { id: string; day: number; minute: number; type: "job_offer"; payload: { job: SideJobState } }
+  | { id: string; day: number; minute: number; type: "network_activity"; payload: { heatDelta: number } };
 
 export type GameNotification = {
   id: string;

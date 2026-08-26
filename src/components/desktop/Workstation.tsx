@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { CampaignState, GameAction } from '../../game/state/types';
 import { FeedView } from './FeedView';
 import { CaseView } from './CaseView';
+import { GraphView } from './GraphView';
+import { OsintView } from './OsintView';
+import { Activity, FolderOpen, Search, Link2, ShieldAlert, LogOut, FastForward, Play, Pause } from 'lucide-react';
 
 export function Workstation({ state, dispatch }: { state: CampaignState, dispatch: React.Dispatch<GameAction> }) {
   const [activeApp, setActiveApp] = useState<string>("TÍN HIỆU");
@@ -67,28 +70,34 @@ export function Workstation({ state, dispatch }: { state: CampaignState, dispatc
            <span>Ngày {state.day}</span>
            <span>{formatTime(state.minuteOfDay)}</span>
            <div className="flex bg-[#172127] rounded overflow-hidden">
-             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 0 } })} className={`px-2 py-1 ${state.speed === 0 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>⏸</button>
-             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 1 } })} className={`px-2 py-1 ${state.speed === 1 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>1x</button>
-             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 2 } })} className={`px-2 py-1 ${state.speed === 2 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>2x</button>
-             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 4 } })} className={`px-2 py-1 ${state.speed === 4 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>4x</button>
+             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 0 } })} className={`px-3 py-1 ${state.speed === 0 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}><Pause size={14} /></button>
+             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 1 } })} className={`px-3 py-1 text-xs font-bold ${state.speed === 1 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>1X</button>
+             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 2 } })} className={`px-3 py-1 text-xs font-bold ${state.speed === 2 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>2X</button>
+             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 4 } })} className={`px-3 py-1 text-xs font-bold ${state.speed === 4 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>4X</button>
            </div>
-           <button onClick={() => dispatch({ type: 'CHANGE_LOCATION', payload: { location: 'apartment' } })} className="px-2 py-1 bg-[#2A363D] hover:bg-[#FF5A5F] rounded transition-colors text-white">Rời khỏi</button>
+           <button onClick={() => dispatch({ type: 'CHANGE_LOCATION', payload: { location: 'apartment' } })} className="px-3 py-1 bg-[#2A363D] hover:bg-[#FF5A5F] rounded transition-colors text-white flex items-center gap-2"><LogOut size={14}/> Rời khỏi</button>
          </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden relative">
         {/* Left Dock */}
         <div className="w-16 bg-[#11171C] border-r border-[#2A363D] flex flex-col items-center py-4 gap-4 shrink-0">
-           {navItems.map(item => (
+           {navItems.map(item => {
+             let Icon = Activity;
+             if (item === "HỒ SƠ") Icon = FolderOpen;
+             if (item === "TRUY VẾT") Icon = Search;
+             if (item === "LIÊN KẾT") Icon = Link2;
+             if (item === "ĐIỀU PHỐI") Icon = ShieldAlert;
+             return (
              <button 
                key={item} 
                onClick={() => setActiveApp(item)} 
-               className={`w-12 h-12 rounded-lg flex items-center justify-center text-xl transition-colors ${activeApp === item ? 'bg-[#45D6BF]/20 text-[#45D6BF] border border-[#45D6BF]/50' : 'text-[#86949B] hover:text-[#E9EEE9] hover:bg-[#172127]'}`}
+               className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeApp === item ? 'bg-[#45D6BF]/20 text-[#45D6BF] border border-[#45D6BF]/50' : 'text-[#86949B] hover:text-[#E9EEE9] hover:bg-[#172127]'}`}
                title={item}
              >
-               {item[0]}
+               <Icon size={24} />
              </button>
-           ))}
+           ) } )}
         </div>
 
         {/* Center Canvas */}
