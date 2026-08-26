@@ -1,4 +1,6 @@
+const fs = require('fs');
 
+const reducerTs = `
 import { CampaignState, GameAction, ScheduledEvent, FeedMessage, FeedState, CaseFileState } from './types';
 import { CASES } from '../content/cases';
 
@@ -58,9 +60,9 @@ function processEvent(state: CampaignState, event: ScheduledEvent): CampaignStat
       }
     };
     next.notifications = [...next.notifications, {
-      id: `notif_${event.id}`,
+      id: \`notif_\${event.id}\`,
       time: state.minuteOfDay,
-      message: `Tín hiệu mới: ${event.payload.title}`,
+      message: \`Tín hiệu mới: \${event.payload.title}\`,
       type: "warning"
     }];
   } else if (event.type === "feed_message") {
@@ -103,7 +105,7 @@ function advanceDay(state: CampaignState): CampaignState {
     casesResolved: Object.values(state.cases).filter(c => c.status !== "open").length,
     falsePositives: 0,
     victimsProtected: 0,
-    summary: `Kết thúc ngày ${state.day}.`
+    summary: \`Kết thúc ngày \${state.day}.\`
   };
 
   // Rent check
@@ -138,13 +140,13 @@ function advanceDay(state: CampaignState): CampaignState {
     // Schedule events for next day
     if (nextDay === 2) {
       nextState.scheduledEvents.push(
-        { id: `solo_start_2`, day: 2, minute: 7 * 60 + 5, type: "feed_start", payload: { feedId: "c2_job_commission", title: "Việc nhẹ lương cao", type: "social" } },
-        { id: `solo_msg_2_1`, day: 2, minute: 7 * 60 + 6, type: "feed_message", payload: { feedId: "c2_job_commission", message: { id: "m_solo_2_1", senderId: "scammer", senderName: "Admin Tuyển Dụng", text: "Tuyển CTV đánh giá sản phẩm. Làm tại nhà, thu nhập 500k-1tr/ngày. Nhấn link để đăng ký nhận 100k ngay.", timestamp: 7 * 60 + 6, clues: ["đánh giá sản phẩm", "nhận 100k ngay"] } } }
+        { id: \`solo_start_2\`, day: 2, minute: 7 * 60 + 5, type: "feed_start", payload: { feedId: "c2_job_commission", title: "Việc nhẹ lương cao", type: "social" } },
+        { id: \`solo_msg_2_1\`, day: 2, minute: 7 * 60 + 6, type: "feed_message", payload: { feedId: "c2_job_commission", message: { id: "m_solo_2_1", senderId: "scammer", senderName: "Admin Tuyển Dụng", text: "Tuyển CTV đánh giá sản phẩm. Làm tại nhà, thu nhập 500k-1tr/ngày. Nhấn link để đăng ký nhận 100k ngay.", timestamp: 7 * 60 + 6, clues: ["đánh giá sản phẩm", "nhận 100k ngay"] } } }
       );
     } else if (nextDay === 3) {
       nextState.scheduledEvents.push(
-        { id: `solo_start_3`, day: 3, minute: 7 * 60 + 5, type: "feed_start", payload: { feedId: "c3_bank_impersonation", title: "Mạo danh ngân hàng", type: "call" } },
-        { id: `solo_msg_3_1`, day: 3, minute: 7 * 60 + 6, type: "feed_message", payload: { feedId: "c3_bank_impersonation", message: { id: "m_solo_3_1", senderId: "scammer", senderName: "0287300xxxx", text: "Tài khoản của anh/chị vừa bị trừ 5 triệu. Đọc mã OTP gửi về máy để hủy giao dịch.", timestamp: 7 * 60 + 6, clues: ["đọc mã OTP", "bị trừ 5 triệu"] } } }
+        { id: \`solo_start_3\`, day: 3, minute: 7 * 60 + 5, type: "feed_start", payload: { feedId: "c3_bank_impersonation", title: "Mạo danh ngân hàng", type: "call" } },
+        { id: \`solo_msg_3_1\`, day: 3, minute: 7 * 60 + 6, type: "feed_message", payload: { feedId: "c3_bank_impersonation", message: { id: "m_solo_3_1", senderId: "scammer", senderName: "0287300xxxx", text: "Tài khoản của anh/chị vừa bị trừ 5 triệu. Đọc mã OTP gửi về máy để hủy giao dịch.", timestamp: 7 * 60 + 6, clues: ["đọc mã OTP", "bị trừ 5 triệu"] } } }
       );
     } else if (nextDay > 3) {
       nextState.status = "debrief";
@@ -184,7 +186,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
         mode: action.payload.mode,
         internetPaidThroughDay: 0,
         status: "playing" as const,
-        location: (isDemo ? "workstation" : "apartment") as "apartment" | "workstation",
+        location: isDemo ? "workstation" : "apartment" as const,
         speed: isDemo ? 0 : 0 as const,
         scheduledEvents: [] as ScheduledEvent[]
       };
@@ -258,7 +260,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
       return {
         ...state,
         evidence: [...state.evidence, action.payload.token],
-        notifications: [...state.notifications, { id: `ev_${action.payload.token.id}`, time: state.minuteOfDay, message: `Trích xuất bằng chứng: ${action.payload.token.label}`, type: "info" }]
+        notifications: [...state.notifications, { id: \`ev_\${action.payload.token.id}\`, time: state.minuteOfDay, message: \`Trích xuất bằng chứng: \${action.payload.token.label}\`, type: "info" }]
       };
     }
     case "ASSIGN_EVIDENCE": {
@@ -279,7 +281,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
       const edge = action.payload;
       return {
         ...state,
-        graphEdges: [...state.graphEdges, { id: `${edge.sourceId}_${edge.targetId}`, ...edge }]
+        graphEdges: [...state.graphEdges, { id: \`\${edge.sourceId}_\${edge.targetId}\`, ...edge }]
       };
     }
     case "EAT": {
@@ -291,7 +293,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
       return {
         ...state,
         inventory: newInv,
-        hunger: clamp(state.hunger + item!.effectValue, 0, 100)
+        hunger: clamp(state.hunger + item.effectValue, 0, 100)
       };
     }
     case "BUY_ITEM": {
@@ -343,7 +345,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
           ...next,
           credits: next.credits + state.activeSideJob.reward,
           activeSideJob: null,
-          notifications: [...next.notifications, { id: `job_${next.day}_${next.minuteOfDay}`, time: next.minuteOfDay, message: `Hoàn thành công việc: +${state.activeSideJob.reward} CR`, type: "success" }]
+          notifications: [...next.notifications, { id: \`job_\${next.day}_\${next.minuteOfDay}\`, time: next.minuteOfDay, message: \`Hoàn thành công việc: +\${state.activeSideJob.reward} CR\`, type: "success" }]
         };
       }
       return {
@@ -385,7 +387,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
          // Return state with notification
          return {
            ...state,
-           notifications: [...state.notifications, { id: `err_${state.minuteOfDay}`, time: state.minuteOfDay, message: `Từ chối: ${errorReason}`, type: "error" }]
+           notifications: [...state.notifications, { id: \`err_\${state.minuteOfDay}\`, time: state.minuteOfDay, message: \`Từ chối: \${errorReason}\`, type: "error" }]
          };
       }
 
@@ -418,7 +420,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
         },
         agencyTrust: clamp(state.agencyTrust + trustDelta, 0, 100),
         credits: state.credits + creditsDelta,
-        notifications: [...state.notifications, { id: `case_${caseId}`, time: state.minuteOfDay, message: `Vụ án xử lý: ${opAction} (+${creditsDelta} CR)`, type: "success" }],
+        notifications: [...state.notifications, { id: \`case_\${caseId}\`, time: state.minuteOfDay, message: \`Vụ án xử lý: \${opAction} (+\${creditsDelta} CR)\`, type: "success" }],
         status: ending,
         speed: speed
       };
@@ -427,3 +429,5 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
       return state;
   }
 }
+`;
+fs.writeFileSync('src/game/state/reducer.ts', reducerTs);

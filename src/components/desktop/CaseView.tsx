@@ -98,7 +98,7 @@ export function CaseView({ state, dispatch }: { state: CampaignState, dispatch: 
                  </div>
                  <div className="flex-1 p-2 space-y-2 overflow-y-auto">
                    {assignedEvidence.length === 0 ? (
-                     <div className="text-center text-[#86949B] text-xs mt-4">Kéo thả bằng chứng vào đây (chức năng sắp ra mắt) hoặc nhấp từ danh sách bên phải.</div>
+                     <div className="text-center text-[#86949B] text-xs mt-4">Nhấp vào bằng chứng từ danh sách bên phải để thêm vào hồ sơ.</div>
                    ) : (
                      assignedEvidence.map(e => (
                        <div key={e.id} className="p-2 bg-[#11171C] border border-[#45D6BF]/30 rounded text-xs">
@@ -142,7 +142,12 @@ export function CaseView({ state, dispatch }: { state: CampaignState, dispatch: 
             </div>
             
             <div className="p-4 border-t border-[#2A363D] bg-[#172127] shrink-0 flex justify-between items-center">
-              <div className="text-xs text-[#86949B]">Quyết định can thiệp:</div>
+              
+              <div className="text-xs flex flex-col gap-1">
+                <span className="text-[#86949B]">Quyết định can thiệp:</span>
+                <span className="text-[#45D6BF] font-mono">BC: {assignedEvidence.length}/3 | Loại: {new Set(assignedEvidence.map(e => e.entityType)).size}/2</span>
+              </div>
+
               <div className="flex gap-2">
                 <button 
                   onClick={() => dispatch({ type: 'OPERATIONAL_ACTION', payload: { caseId: selectedCase.id, action: 'warned' } })}

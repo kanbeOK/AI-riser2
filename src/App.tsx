@@ -1,6 +1,6 @@
 import React, { useReducer, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router';
-import { gameReducer, INITIAL_STATE } from './game/state/reducer';
+import { campaignReducer, INITIAL_STATE } from './game/state/reducer';
 import { CampaignState, GameAction } from './game/state/types';
 import { Apartment } from './components/apartment/Apartment';
 import { Workstation } from './components/desktop/Workstation';
@@ -27,7 +27,7 @@ function IntroScreen() {
 }
 
 function GameRoot() {
-  const [state, dispatch] = useReducer(gameReducer, INITIAL_STATE);
+  const [state, dispatch] = useReducer(campaignReducer, INITIAL_STATE);
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

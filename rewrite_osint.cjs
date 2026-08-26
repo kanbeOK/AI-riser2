@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+const fs = require('fs');
+const content = `import React, { useState } from 'react';
 import { CampaignState, GameAction } from '../../game/state/types';
 import { Search } from 'lucide-react';
 
@@ -14,16 +15,16 @@ export function OsintView({ state, dispatch }: { state: CampaignState, dispatch:
     
     if (matchingEvidence) {
       if (matchingEvidence.entityType === 'phone') {
-        setResult(`Phân tích [${matchingEvidence.value}]: Cảnh báo! Số điện thoại này nằm trong danh sách đen, liên quan đến 2 vụ lừa đảo mạo danh ngân hàng trước đây.`);
+        setResult(\`Phân tích [\${matchingEvidence.value}]: Cảnh báo! Số điện thoại này nằm trong danh sách đen, liên quan đến 2 vụ lừa đảo mạo danh ngân hàng trước đây.\`);
       } else if (matchingEvidence.entityType === 'domain') {
-        setResult(`Phân tích [${matchingEvidence.value}]: Tên miền mới đăng ký cách đây 3 ngày. IP máy chủ đặt tại nước ngoài (không khớp với vị trí doanh nghiệp thật).`);
+        setResult(\`Phân tích [\${matchingEvidence.value}]: Tên miền mới đăng ký cách đây 3 ngày. IP máy chủ đặt tại nước ngoài (không khớp với vị trí doanh nghiệp thật).\`);
       } else if (matchingEvidence.entityType === 'account') {
-        setResult(`Phân tích [${matchingEvidence.value}]: Tài khoản ảo. Có lịch sử nhận và chuyển tiền liên tục đi nhiều tài khoản phụ trong thời gian ngắn.`);
+        setResult(\`Phân tích [\${matchingEvidence.value}]: Tài khoản ảo. Có lịch sử nhận và chuyển tiền liên tục đi nhiều tài khoản phụ trong thời gian ngắn.\`);
       } else {
-        setResult(`Phân tích [${matchingEvidence.value}]: Thực thể này (${matchingEvidence.entityType}) có dấu hiệu dị thường trên hệ thống mạng.`);
+        setResult(\`Phân tích [\${matchingEvidence.value}]: Thực thể này (\${matchingEvidence.entityType}) có dấu hiệu dị thường trên hệ thống mạng.\`);
       }
     } else {
-      setResult(`Không tìm thấy dữ liệu tình báo nào khớp với "${query}". Hãy chắc chắn rằng bạn đã trích xuất bằng chứng này từ tín hiệu.`);
+      setResult(\`Không tìm thấy dữ liệu tình báo nào khớp với "\${query}". Hãy chắc chắn rằng bạn đã trích xuất bằng chứng này từ tín hiệu.\`);
     }
   };
   
@@ -67,3 +68,5 @@ export function OsintView({ state, dispatch }: { state: CampaignState, dispatch:
     </div>
   );
 }
+`;
+fs.writeFileSync('src/components/desktop/OsintView.tsx', content);

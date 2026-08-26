@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+const fs = require('fs');
+
+const content = `import React, { useState } from 'react';
 import { CampaignState, GameAction } from '../../game/state/types';
 import { FeedView } from './FeedView';
 import { CaseView } from './CaseView';
@@ -12,7 +14,7 @@ export function Workstation({ state, dispatch }: { state: CampaignState, dispatc
   const formatTime = (minutes: number) => {
     const h = Math.floor(minutes / 60).toString().padStart(2, '0');
     const m = (minutes % 60).toString().padStart(2, '0');
-    return `${h}:${m}`;
+    return \`\${h}:\${m}\`;
   };
 
   const navItems = ["TÍN HIỆU", "HỒ SƠ", "TRUY VẾT", "LIÊN KẾT"];
@@ -54,10 +56,10 @@ export function Workstation({ state, dispatch }: { state: CampaignState, dispatc
            <span>Ngày {state.day}</span>
            <span>{formatTime(state.minuteOfDay)}</span>
            <div className="flex bg-[#172127] rounded overflow-hidden">
-             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 0 } })} className={`px-3 py-1 ${state.speed === 0 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}><Pause size={14} /></button>
-             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 1 } })} className={`px-3 py-1 text-xs font-bold ${state.speed === 1 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>1X</button>
-             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 2 } })} className={`px-3 py-1 text-xs font-bold ${state.speed === 2 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>2X</button>
-             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 4 } })} className={`px-3 py-1 text-xs font-bold ${state.speed === 4 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}`}>4X</button>
+             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 0 } })} className={\`px-3 py-1 \${state.speed === 0 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}\`}><Pause size={14} /></button>
+             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 1 } })} className={\`px-3 py-1 text-xs font-bold \${state.speed === 1 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}\`}>1X</button>
+             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 2 } })} className={\`px-3 py-1 text-xs font-bold \${state.speed === 2 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}\`}>2X</button>
+             <button onClick={() => dispatch({ type: 'SET_SPEED', payload: { speed: 4 } })} className={\`px-3 py-1 text-xs font-bold \${state.speed === 4 ? 'bg-[#45D6BF] text-[#080B0E]' : 'hover:bg-[#2A363D]'}\`}>4X</button>
            </div>
            <button onClick={() => dispatch({ type: 'CHANGE_LOCATION', payload: { location: 'apartment' } })} className="px-3 py-1 bg-[#2A363D] hover:bg-[#FF5A5F] rounded transition-colors text-white flex items-center gap-2"><LogOut size={14}/> Rời khỏi</button>
          </div>
@@ -76,7 +78,7 @@ export function Workstation({ state, dispatch }: { state: CampaignState, dispatc
              <button 
                key={item} 
                onClick={() => setActiveApp(item)}
-               className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${activeApp === item ? 'bg-[#45D6BF]/20 text-[#45D6BF] border border-[#45D6BF]/50' : 'text-[#86949B] hover:text-[#E9EEE9] hover:bg-[#172127]'}`}
+               className={\`w-12 h-12 rounded-lg flex items-center justify-center transition-colors \${activeApp === item ? 'bg-[#45D6BF]/20 text-[#45D6BF] border border-[#45D6BF]/50' : 'text-[#86949B] hover:text-[#E9EEE9] hover:bg-[#172127]'}\`}
                title={item}
              >
                <Icon size={24} />
@@ -121,7 +123,7 @@ export function Workstation({ state, dispatch }: { state: CampaignState, dispatc
       {/* Notifications */}
       <div className="absolute bottom-4 right-4 flex flex-col gap-2 pointer-events-none z-50">
         {state.notifications.slice(-3).map(n => (
-          <div key={n.id} className={`px-4 py-3 bg-[#11171C] border border-[#2A363D] rounded shadow-lg flex gap-3 items-center ${n.type === 'success' ? 'border-l-4 border-l-[#45D6BF]' : n.type === 'warning' ? 'border-l-4 border-l-[#F2B35D]' : n.type === 'info' ? 'border-l-4 border-l-[#6DA8FF]' : 'border-l-4 border-l-[#FF5A5F]'}`}>
+          <div key={n.id} className={\`px-4 py-3 bg-[#11171C] border border-[#2A363D] rounded shadow-lg flex gap-3 items-center \${n.type === 'success' ? 'border-l-4 border-l-[#45D6BF]' : n.type === 'warning' ? 'border-l-4 border-l-[#F2B35D]' : n.type === 'info' ? 'border-l-4 border-l-[#6DA8FF]' : 'border-l-4 border-l-[#FF5A5F]'}\`}>
             <span className="opacity-50 text-[10px] font-mono">[{formatTime(n.time)}]</span> 
             <span className="text-xs">{n.message}</span>
           </div>
@@ -130,3 +132,5 @@ export function Workstation({ state, dispatch }: { state: CampaignState, dispatc
     </div>
   );
 }
+`;
+fs.writeFileSync('src/components/desktop/Workstation.tsx', content);

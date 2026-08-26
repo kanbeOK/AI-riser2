@@ -56,7 +56,7 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
       const data = await response.json();
       
       const triggerMin = state.minuteOfDay + 1;
-      const respId = `m_${state.day}_${triggerMin}_sys_${Math.floor(Math.random()*1000)}`;
+      const respId = `m_${state.day}_${triggerMin}_sys_${feed.messages.length}`; 
       
       const newClues = data.newClueId ? [data.newClueId] : [];
       
@@ -128,7 +128,17 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
                  <span className="w-2 h-2 rounded-full bg-[#45D6BF] animate-pulse"></span>
                  {feed.title}
                </span>
-               <span className="text-[#86949B] px-2 py-1 bg-[#2A363D] rounded">{feed.type.toUpperCase()}</span>
+               <div className="flex gap-2 items-center">
+                 {!state.cases[feed.id] && (
+                   <button 
+                     onClick={() => dispatch({ type: 'CREATE_CASE', payload: { id: feed.id, title: feed.title } })}
+                     className="bg-[#F2B35D] text-[#080B0E] px-2 py-1 rounded font-bold hover:bg-[#F4C584] transition-colors"
+                   >
+                     + MỞ HỒ SƠ
+                   </button>
+                 )}
+                 <span className="text-[#86949B] px-2 py-1 bg-[#2A363D] rounded">{feed.type.toUpperCase()}</span>
+               </div>
             </div>
             <div className="flex-1 p-4 overflow-y-auto space-y-4">
                {feed.messages.map(m => (
@@ -155,7 +165,7 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
                                   caseId: null,
                                   feedId: feed.id,
                                   eventId: m.id,
-                                  entityType: 'domain', // Simple default for now
+                                  entityType: c.length % 3 === 0 ? 'account' : c.length % 2 === 0 ? 'phone' : 'domain',
                                   label: c,
                                   value: c,
                                   observedAt: state.minuteOfDay,
