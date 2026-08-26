@@ -1,34 +1,47 @@
-# PHANH! - Dính bẫy giả. Né mất tiền thật.
+# MẮT LƯỚI — Ca trực 03
 
-AI Social-Engineering Simulator cho Việt Nam. Luyện phản xạ bảo vệ bản thân và người thân trước các thủ đoạn lừa đảo mạng trong môi trường mô phỏng an toàn.
+Game điều tra chống lừa đảo dành cho AI Riser Vietnam 2026. Người chơi là một điều tra viên từ xa: theo dõi hai tín hiệu song song, niêm phong manh mối, tra cứu OSINT, nối các node kỹ thuật và chọn mức can thiệp trước khi nạn nhân chuyển tiền.
 
-## Competition Alignment
-- Chương trình: AI Riser Vietnam 2026
-- Hạng mục: Phòng chống Lừa đảo (Scam and Fraud) + Trò chơi (Game)
-- Đề bài: #17 — Trò chơi/website tương tác nâng cao nhận thức cộng đồng.
+Đây không phải trang trắc nghiệm. Vòng lặp chính kéo dài ba đêm và buộc người chơi cân bằng cả công việc lẫn đời sống: tiền nhà, internet, thức ăn, năng lượng và việc làm thêm đều tác động tới khả năng điều tra.
 
-## Architecture & Data Flow
-Ứng dụng được xây dựng với kiến trúc Full-stack TypeScript (React Vite + Express Node.js).
-Client gửi quyết định tới Server; Server gọi Gemini API phân tích và tạo kịch bản lừa đảo phân nhánh.
+## Competition alignment
 
-**Privacy Boundary:** Toàn bộ quá trình kiểm tra tin nhắn và tương tác giả lập được thực hiện mà KHÔNG lưu trữ nội dung tin nhắn thật của người dùng. "Reflex Score" được tính toán trên trình duyệt (localStorage) để đảm bảo tính ẩn danh 100%. Firebase Analytics/Firestore đã được lược bỏ khỏi P0 để tránh các cam kết sai sự thật.
+- Đề bài #17 — trò chơi/website tương tác nâng cao nhận thức cộng đồng.
+- Chủ đề: phòng chống lừa đảo và gian lận số tại Việt Nam.
+- Sáu vụ án hư cấu: giả shipper, shipper hợp pháp dễ bị báo nhầm, cộng tác viên hoa hồng, giả tổng đài ngân hàng, cuộc gọi khẩn cấp và hoàn học phí giả.
+- Mọi domain dùng TLD `.test`; số điện thoại, tài khoản và danh tính đều là dữ liệu mô phỏng.
 
-## Google Technologies
-- **Gemini API (2.5-flash)**: Đóng vai trò sinh kịch bản lừa đảo phân nhánh an toàn (với Deterministic fallback khi lỗi/quá tải) và là lõi của công cụ "Kiểm tra tin nhắn" (Checker).
-- **Google Safe Browsing V5 (Planned)**: Cảnh báo link độc hại (hiện đang trả về chưa kiểm tra nếu thiếu API Key).
-- **Cloud Run**: Triển khai frontend và backend trên cùng một container.
+## Vòng lặp gameplay
 
-## Local Setup
-1. `npm install`
-2. Tạo `.env` chứa `GEMINI_API_KEY`.
-3. `npm run dev`
+1. Nhận briefing tại căn hộ và vào ca trực lúc 19:00.
+2. Theo dõi hai feed chạy đồng thời; thời gian tiếp tục trôi khi mở công cụ điều tra.
+3. Niêm phong bằng chứng chỉ sau khi nó thực sự xuất hiện trong feed.
+4. Dùng OSINT để xác minh, sau đó nối đúng các quan hệ kỹ thuật trên graph.
+5. Cảnh báo, đóng băng, chuyển hồ sơ hoặc xác nhận tín hiệu hợp pháp. Báo nhầm bị phạt.
+6. Trở về căn hộ, làm thêm, ăn, thanh toán internet/tiền nhà và ngủ sang đêm mới.
 
-Nếu không có API Key, hệ thống vẫn sẽ hoạt động nhờ các luồng kịch bản Deterministic Fallback.
+## Kiến trúc
 
-## Deployment & Tests
-Xem `DEPLOYMENT.md`.
+- React 19 + TypeScript + Vite cho client.
+- Reducer thuần và scheduler deterministic cho toàn bộ state machine ba ngày.
+- Express phục vụ SPA và `/api/scenarios/turn`.
+- Gemini 2.5 Flash chỉ bổ sung hội thoại tự do. Không có khóa hoặc khi API lỗi, timeline deterministic vẫn đảm bảo game chơi trọn vẹn.
+- Không Firebase, không database, không thu thập dữ liệu cá nhân và không đưa API key xuống client.
 
-## Known Limitations
-- Checker hiện tại sẽ báo "Chưa kiểm tra danh tiếng đường dẫn" nếu không cung cấp khóa Google Safe Browsing API.
-- Chế độ tải ảnh của Checker đã được loại bỏ để đảm bảo phân tích văn bản sâu sát và tối ưu nhất cho P0.
-- Điểm "Tiến bộ của bạn" hiện chỉ tính dựa trên dữ liệu lưu trữ nội bộ (localStorage). Không sử dụng cơ sở dữ liệu bên ngoài.
+## Chạy local
+
+```bash
+npm ci
+npm run dev
+```
+
+Mở `http://localhost:8080`. `GEMINI_API_KEY` là tùy chọn; xem `.env.example`.
+
+## Kiểm thử và production
+
+```bash
+npm run verify
+npm start
+```
+
+`verify` chạy typecheck, 24 bài unit/integration/click-path, production build và kiểm tra CSS đã bundle. Dockerfile triển khai frontend + backend trong một container Cloud Run. Hướng dẫn chi tiết nằm trong `DEPLOYMENT.md`.

@@ -6,5 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     globals: true,
+    clearMocks: true,
+    restoreMocks: true,
   },
 });

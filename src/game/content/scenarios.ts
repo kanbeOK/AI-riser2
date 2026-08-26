@@ -1,235 +1,316 @@
-
-import { EntityType, EvidenceTemplate, StoryBeat, ScenarioDefinition } from './content';
+import type { ScenarioDefinition } from "./content";
 
 export const SCENARIOS: Record<string, ScenarioDefinition> = {
   c1_qr_delivery: {
     id: "c1_qr_delivery",
-    title: "Mã QR Giao hàng",
+    day: 1,
+    title: "Đơn hàng 250K",
+    brief: "Một shipper tự xưng yêu cầu nạn nhân quét QR ngoài ứng dụng.",
     type: "chat",
+    isScam: true,
+    victim: { id: "victim_huong", name: "Hương", moneyAtRisk: 2_500_000 },
     tactics: ["Giả mạo", "Gây áp lực thời gian"],
-    learningObjective: "Không quét mã QR lạ từ shipper giả mạo",
+    learningObjective: "Kiểm tra đích đến của QR và danh tính tài khoản trước khi thanh toán.",
     evidenceBase: {
+      c1_phone: {
+        id: "c1_phone",
+        label: "SIM giao hàng",
+        entityType: "phone",
+        displayValue: "SIM-MÔ-PHỎNG-09X-001",
+        lookupResult: "Thuê bao mô phỏng vừa kích hoạt, không thuộc tổng đài của VietShip Fictional.",
+        relatedEntityIds: ["c1_domain"],
+        educationalNote: "Số gọi đến chỉ là một dấu hiệu; cần đối chiếu thêm domain và tài khoản nhận tiền.",
+      },
+      c1_qr: {
+        id: "c1_qr",
+        label: "Payload mã QR",
+        entityType: "qrPayload",
+        displayValue: "https://vietship-pay.test/order/250",
+        lookupResult: "QR mở một trang web thay vì lệnh thanh toán trong ứng dụng giao hàng.",
+        relatedEntityIds: ["c1_domain"],
+        educationalNote: "Xem trước nội dung QR; không mở link thanh toán được gửi ngoài kênh chính thức.",
+      },
       c1_domain: {
         id: "c1_domain",
         label: "Domain thanh toán",
         entityType: "domain",
         displayValue: "vietship-pay.test",
-        lookupResult: "Domain đăng ký hôm qua qua dịch vụ ẩn danh. Host tại IP liên kết với mạng lưới nghi ngờ CÒ XÁM.",
-        relatedEntityIds: ["coxam_ip", "c1_account"],
-        educationalNote: "Kẻ gian thường tạo domain giả mạo nhái các hãng vận chuyển."
+        lookupResult: "Domain mô phỏng mới tạo 1 ngày, certificate dùng chung hạ tầng với CÒ XÁM.",
+        relatedEntityIds: ["c1_qr", "c1_account", "c1_phone", "c6_domain"],
+        educationalNote: "Tên miền ghép thêm từ pay, secure hoặc vip có thể được dùng để giả thương hiệu.",
       },
       c1_account: {
         id: "c1_account",
-        label: "STK Cá nhân",
+        label: "Tài khoản nhận tiền",
         entityType: "bankAccount",
-        displayValue: "9988776655 (Nguyen Van A)",
-        lookupResult: "Tài khoản cá nhân, không thuộc tổ chức doanh nghiệp. Dòng tiền chuyển đến liên tục được rút ra.",
-        relatedEntityIds: ["c1_domain"],
-        educationalNote: "Công ty giao hàng không dùng tài khoản cá nhân cho cổng thanh toán."
+        displayValue: "ML-9988-7766 / NGƯỜI NHẬN A",
+        lookupResult: "Tài khoản cá nhân mô phỏng, dòng tiền bị rút ngay sau khi nhận.",
+        relatedEntityIds: ["c1_domain", "c3_account", "c5_account"],
+        educationalNote: "Đơn vị giao hàng không thu phí hệ thống qua tài khoản cá nhân lạ.",
       },
-      c1_qrPayload: {
-        id: "c1_qrPayload",
-        label: "Mã QR",
-        entityType: "qrPayload",
-        displayValue: "Chứa link tới vietship-pay.test thay vì lệnh chuyển tiền trực tiếp",
-        lookupResult: "QR không phải chuẩn EMVCo của ngân hàng mà là URL chuyển hướng tải mã độc/phishing.",
-        relatedEntityIds: ["c1_domain"],
-        educationalNote: "Luôn kiểm tra nội dung mã QR trước khi mở."
-      },
-      c1_phone: {
-        id: "c1_phone",
-        label: "SĐT Shipper",
-        entityType: "phone",
-        displayValue: "0901234567",
-        lookupResult: "SIM rác, kích hoạt được 3 ngày.",
-        relatedEntityIds: ["coxam_device"],
-        educationalNote: "SIM rác thường được dùng để lừa đảo."
-      }
     },
     beats: [
-      { id: "b1", sender: 'scammer', senderName: 'VietShip', text: "Chào bạn, tôi là shipper. Bạn có đơn hàng 250k đang chờ dưới sảnh.", clues: ["c1_phone"], waitBefore: 0 },
-      { id: "b2", sender: 'scammer', senderName: 'VietShip', text: "Tôi đang vội giao tuyến khác, bạn quét mã QR này thanh toán rồi xuống lấy luôn nhé.", clues: ["c1_qrPayload"], waitBefore: 1 },
-      { id: "b3", sender: 'scammer', senderName: 'VietShip', text: "Nếu không thanh toán trong 5 phút tôi sẽ đánh dấu hoàn hàng.", clues: [], waitBefore: 2 },
-      { id: "b4", sender: 'system', senderName: 'System', text: "[Nạn nhân đã truy cập vào vietship-pay.test và chuẩn bị chuyển tiền vào STK 9988776655]", clues: ["c1_domain", "c1_account"], waitBefore: 2 }
+      { id: "c1_b1", sender: "scammer", senderName: "VietShip // NV-17", text: "Chị Hương có đơn 250 nghìn. Em đang đứng dưới sảnh, chị xác nhận giúp em nhé.", clues: ["c1_phone"], waitBefore: 0 },
+      { id: "c1_b2", sender: "scammer", senderName: "VietShip // NV-17", text: "Ứng dụng đang bảo trì. Chị quét QR này để xác nhận, hệ thống sẽ hoàn lại ngay.", clues: ["c1_qr"], waitBefore: 1 },
+      { id: "c1_b3", sender: "system", senderName: "BỘ LỌC GIAO DỊCH", text: "QR chuyển hướng qua một domain không nằm trong danh sách dịch vụ đã xác minh.", clues: ["c1_domain"], waitBefore: 2 },
+      { id: "c1_b4", sender: "scammer", senderName: "VietShip // NV-17", text: "Còn hai phút thôi chị, không xác nhận là em buộc phải hoàn đơn.", clues: ["c1_account"], waitBefore: 2 },
     ],
     redHerringClues: ["c1_phone"],
-    deadlineMinutes: 10
+    deadlineMinutes: 12,
   },
+
   c2_legit_shipper: {
     id: "c2_legit_shipper",
-    title: "Shipper hiểu lầm",
+    day: 1,
+    title: "Shipper bị hiểu lầm",
+    brief: "Một cuộc giao hàng hợp pháp có ngôn ngữ khá giống vụ lừa đảo vừa xuất hiện.",
     type: "chat",
+    isScam: false,
+    victim: { id: "victim_minh", name: "Minh", moneyAtRisk: 320_000 },
     tactics: [],
-    learningObjective: "Không báo cáo nhầm người giao hàng hợp pháp",
+    learningObjective: "Không kết luận từ một dấu hiệu đơn lẻ; luôn kiểm chứng bằng kênh chính thức.",
     evidenceBase: {
+      c2_order: {
+        id: "c2_order",
+        label: "Mã vận đơn",
+        entityType: "identityClaim",
+        displayValue: "N24-DEMO-4F81",
+        lookupResult: "Mã mô phỏng khớp đơn hàng đã tạo trong ứng dụng Nhanh24 Fictional.",
+        relatedEntityIds: ["c2_domain"],
+        educationalNote: "Đối chiếu mã vận đơn trong ứng dụng thay vì tin nội dung tin nhắn.",
+      },
       c2_domain: {
         id: "c2_domain",
-        label: "Tracking Link",
+        label: "Trang theo dõi chính thức",
         entityType: "domain",
-        displayValue: "ghn.vn/tracking/123",
-        lookupResult: "Domain chính thức của Giao Hàng Nhanh. Đã hoạt động 10 năm.",
-        relatedEntityIds: [],
-        educationalNote: "Luôn kiểm tra kỹ tên miền."
+        displayValue: "tracking.nhanh24.test",
+        lookupResult: "Domain mô phỏng đã được tổ chức allowlist và khớp certificate chính thức.",
+        relatedEntityIds: ["c2_order", "c2_account"],
+        educationalNote: "Domain chính thức phải khớp tuyệt đối, không chỉ trông gần giống.",
       },
       c2_account: {
         id: "c2_account",
-        label: "STK Công ty",
+        label: "Tài khoản doanh nghiệp",
         entityType: "bankAccount",
-        displayValue: "0123456 (CÔNG TY CP GIAO HANG NHANH)",
-        lookupResult: "Tài khoản doanh nghiệp hợp lệ.",
-        relatedEntityIds: [],
-        educationalNote: "Tài khoản doanh nghiệp thường an toàn hơn."
+        displayValue: "N24-CORP-DEMO-001",
+        lookupResult: "Tài khoản mô phỏng đứng tên doanh nghiệp Nhanh24 Fictional và khớp hóa đơn.",
+        relatedEntityIds: ["c2_domain"],
+        educationalNote: "Dữ kiện nhất quán giữa vận đơn, domain và chủ tài khoản giúp giảm false positive.",
       },
-      c2_phone: {
-        id: "c2_phone",
-        label: "SĐT Shipper",
-        entityType: "phone",
-        displayValue: "0912345678",
-        lookupResult: "Thuê bao trả sau, đăng ký chính chủ.",
-        relatedEntityIds: [],
-        educationalNote: ""
-      }
     },
     beats: [
-      { id: "b1", sender: 'scammer', senderName: 'Shipper Giao Hàng Nhanh', text: "Anh có nhà không, em giao đơn mã XYZ123.", clues: ["c2_phone"], waitBefore: 0 },
-      { id: "b2", sender: 'scammer', senderName: 'Shipper Giao Hàng Nhanh', text: "Anh theo dõi lộ trình qua link ghn.vn/tracking/123 nhé.", clues: ["c2_domain"], waitBefore: 1 },
-      { id: "b3", sender: 'scammer', senderName: 'Shipper Giao Hàng Nhanh', text: "Anh chuyển khoản vào tài khoản công ty giúp em, không đưa tiền mặt.", clues: ["c2_account"], waitBefore: 1 }
+      { id: "c2_b1", sender: "scammer", senderName: "Nhanh24 // Tài xế 08", text: "Anh Minh có nhà không? Em giao đơn mã N24-DEMO-4F81.", clues: ["c2_order"], waitBefore: 0 },
+      { id: "c2_b2", sender: "scammer", senderName: "Nhanh24 // Tài xế 08", text: "Anh có thể kiểm tra lộ trình ngay trong ứng dụng hoặc tại tracking.nhanh24.test.", clues: ["c2_domain"], waitBefore: 2 },
+      { id: "c2_b3", sender: "system", senderName: "BỘ LỌC GIAO DỊCH", text: "Chủ tài khoản nhận tiền trùng với pháp nhân trên hóa đơn mô phỏng.", clues: ["c2_account"], waitBefore: 2 },
     ],
-    redHerringClues: ["c2_phone"],
-    deadlineMinutes: 15
+    redHerringClues: ["c2_account"],
+    deadlineMinutes: 18,
   },
+
   c3_commission: {
     id: "c3_commission",
-    title: "Cộng tác viên",
+    day: 2,
+    title: "Cộng tác viên hoa hồng",
+    brief: "Một nhóm tuyển dụng mời nạn nhân nạp tiền để mở khóa nhiệm vụ có lợi nhuận cao.",
     type: "social",
-    tactics: ["Lòng tham", "Lợi nhuận lớn"],
-    learningObjective: "Cảnh giác với mô hình đa cấp/việc nhẹ lương cao.",
+    isScam: true,
+    victim: { id: "victim_lan", name: "Lan", moneyAtRisk: 8_000_000 },
+    tactics: ["Lợi nhuận bất thường", "Hiệu ứng đám đông"],
+    learningObjective: "Không nạp tiền trước để nhận việc hoặc rút khoản thưởng ảo.",
     evidenceBase: {
       c3_domain: {
         id: "c3_domain",
-        label: "Trang nhiệm vụ",
+        label: "Cổng nhiệm vụ VIP",
         entityType: "domain",
-        displayValue: "shoppee-mall-vip.test",
-        lookupResult: "Domain giả mạo thương hiệu Shopee. IP trỏ về mạng lưới CÒ XÁM.",
-        relatedEntityIds: ["coxam_ip"],
-        educationalNote: "Kẻ gian thường chèn thêm chữ VIP, MALL vào tên miền để đánh lừa."
+        displayValue: "chomo-vip-task.test",
+        lookupResult: "Domain mô phỏng mới tạo, dùng cùng cụm certificate với các trang CÒ XÁM.",
+        relatedEntityIds: ["c3_account", "c3_group", "c4_app", "c6_domain"],
+        educationalNote: "Tên miền chứa vip hoặc task không chứng minh đây là đối tác của sàn thương mại.",
       },
       c3_account: {
         id: "c3_account",
-        label: "Tài khoản thu tiền",
+        label: "Tài khoản kích hoạt VIP",
         entityType: "bankAccount",
-        displayValue: "9988776655 (Nguyen Van A)",
-        lookupResult: "Trùng khớp với STK trong vụ C1.",
-        relatedEntityIds: ["c1_account"],
-        educationalNote: "Kẻ lừa đảo thường dùng chung tài khoản trung gian."
-      }
+        displayValue: "ML-9988-7766 / NGƯỜI NHẬN A",
+        lookupResult: "Trùng dấu vết người nhận với tài khoản xuất hiện trong vụ Đơn hàng 250K.",
+        relatedEntityIds: ["c3_domain", "c1_account"],
+        educationalNote: "Một tài khoản trung gian xuất hiện trong nhiều kịch bản là bằng chứng liên kết mạnh.",
+      },
+      c3_group: {
+        id: "c3_group",
+        label: "Nhóm tuyển dụng",
+        entityType: "identityClaim",
+        displayValue: "NHÓM-DEMO-CTV-88",
+        lookupResult: "Các tài khoản khoe nhận thưởng đều được tạo cùng ngày và dùng ảnh đại diện tổng hợp.",
+        relatedEntityIds: ["c3_domain"],
+        educationalNote: "Ảnh chuyển khoản và lời chứng trong nhóm kín có thể được dàn dựng.",
+      },
     },
     beats: [
-      { id: "b1", sender: 'scammer', senderName: 'Chuyên viên Tuyển Dụng', text: "Tuyển CTV xử lý đơn hàng Shopee. Vốn 500k, thu lãi 100k ngay lập tức.", clues: [], waitBefore: 0 },
-      { id: "b2", sender: 'scammer', senderName: 'Chuyên viên Tuyển Dụng', text: "Mời bạn truy cập shoppee-mall-vip.test để nhận nhiệm vụ.", clues: ["c3_domain"], waitBefore: 1 },
-      { id: "b3", sender: 'system', senderName: 'System', text: "[Nạn nhân chuẩn bị chuyển 500k vào STK 9988776655 để kích hoạt VIP]", clues: ["c3_account"], waitBefore: 2 }
+      { id: "c3_b1", sender: "scammer", senderName: "Điều phối CTV", text: "Chị Lan được chọn vào nhóm đối tác. Nhiệm vụ đầu chỉ cần 500 nghìn, hoa hồng 20%.", clues: ["c3_group"], waitBefore: 0 },
+      { id: "c3_b2", sender: "scammer", senderName: "Điều phối CTV", text: "Đăng nhập cổng VIP để hệ thống ghi nhận doanh số nhé.", clues: ["c3_domain"], waitBefore: 1 },
+      { id: "c3_b3", sender: "system", senderName: "DÒNG TIỀN", text: "Tài khoản nhận tiền trùng dấu vết với hồ sơ ngày 1.", clues: ["c3_account"], waitBefore: 2 },
+      { id: "c3_b4", sender: "scammer", senderName: "Điều phối CTV", text: "Muốn rút cả vốn lẫn lời, chị phải hoàn thành thêm nhiệm vụ tám triệu ngay hôm nay.", clues: [], waitBefore: 2 },
     ],
-    redHerringClues: [],
-    deadlineMinutes: 10
+    redHerringClues: ["c3_group"],
+    deadlineMinutes: 11,
   },
+
   c4_bank_impersonation: {
     id: "c4_bank_impersonation",
+    day: 2,
     title: "Tổng đài khóa tài khoản",
+    brief: "Một cuộc gọi VOIP giả số tổng đài yêu cầu cài ứng dụng bảo mật ngoài kho chính thức.",
     type: "call",
-    tactics: ["Giả mạo ngân hàng", "Khơi gợi nỗi sợ"],
-    learningObjective: "Ngân hàng không bao giờ gọi điện yêu cầu cung cấp OTP hoặc cài app ngoài.",
+    isScam: true,
+    victim: { id: "victim_quang", name: "Quang", moneyAtRisk: 50_000_000 },
+    tactics: ["Khơi gợi nỗi sợ", "Giả thẩm quyền"],
+    learningObjective: "Ngân hàng không yêu cầu OTP hoặc cài APK qua đường link trong cuộc gọi.",
     evidenceBase: {
       c4_caller: {
         id: "c4_caller",
         label: "Metadata cuộc gọi",
         entityType: "callerMetadata",
-        displayValue: "Cuộc gọi VOIP quốc tế spoof số tổng đài",
-        lookupResult: "Tra cứu cho thấy cuộc gọi xuất phát từ trạm phát sóng nước ngoài thuộc hạ tầng CÒ XÁM.",
-        relatedEntityIds: ["coxam_ip"],
-        educationalNote: "Số tổng đài hiển thị trên màn hình có thể bị giả mạo dễ dàng (Spoofing)."
+        displayValue: "VOIP-SPOOF-DEMO / MASK-DH-1900",
+        lookupResult: "Caller ID bị giả; tuyến gọi mô phỏng không xuất phát từ tổng đài Đông Hải Fictional.",
+        relatedEntityIds: ["c4_app"],
+        educationalNote: "Số hiển thị trên màn hình có thể bị giả mạo; hãy tự gọi lại số chính thức.",
       },
-      c4_domain: {
-        id: "c4_domain",
-        label: "App bảo mật (APK)",
+      c4_app: {
+        id: "c4_app",
+        label: "Ứng dụng bảo mật giả",
         entityType: "domain",
-        displayValue: "vcb-smart-protect.test",
-        lookupResult: "Domain chứa file APK chứa mã độc đọc lén SMS.",
-        relatedEntityIds: ["coxam_ip"],
-        educationalNote: "Không bao giờ cài ứng dụng từ đường link bên ngoài chợ ứng dụng chính thức."
-      }
+        displayValue: "donghai-protect.test/app.apk",
+        lookupResult: "File mô phỏng yêu cầu quyền đọc SMS và dùng cùng certificate cluster với CÒ XÁM.",
+        relatedEntityIds: ["c4_caller", "c4_otp", "c3_domain"],
+        educationalNote: "Không cài ứng dụng ngân hàng từ link gửi trong cuộc gọi hoặc tin nhắn.",
+      },
+      c4_otp: {
+        id: "c4_otp",
+        label: "Yêu cầu OTP",
+        entityType: "transaction",
+        displayValue: "REQUEST-OTP-DEMO-4402",
+        lookupResult: "OTP này xác nhận đăng ký thiết bị mới, không phải hủy giao dịch.",
+        relatedEntityIds: ["c4_app"],
+        educationalNote: "Đọc kỹ nội dung SMS OTP; ngân hàng không hỏi mã này qua điện thoại.",
+      },
     },
     beats: [
-      { id: "b1", sender: 'scammer', senderName: 'Tổng đài viên', text: "Tài khoản của bạn vừa có giao dịch bất thường 50 triệu tại nước ngoài.", clues: ["c4_caller"], waitBefore: 0 },
-      { id: "b2", sender: 'scammer', senderName: 'Tổng đài viên', text: "Nếu không phải bạn thực hiện, vui lòng truy cập vcb-smart-protect.test tải app để chặn giao dịch.", clues: ["c4_domain"], waitBefore: 1 },
-      { id: "b3", sender: 'scammer', senderName: 'Tổng đài viên', text: "Nhanh lên, hệ thống sẽ tự động trừ tiền trong 3 phút nữa.", clues: [], waitBefore: 2 }
+      { id: "c4_b1", sender: "scammer", senderName: "Tổng đài Đông Hải", text: "Tài khoản anh Quang đang có giao dịch quốc tế 50 triệu. Chúng tôi cần khóa khẩn cấp.", clues: ["c4_caller"], waitBefore: 0 },
+      { id: "c4_b2", sender: "scammer", senderName: "Tổng đài Đông Hải", text: "Anh cài công cụ bảo mật từ donghai-protect.test để hệ thống nhận diện thiết bị.", clues: ["c4_app"], waitBefore: 1 },
+      { id: "c4_b3", sender: "system", senderName: "GIÁM SÁT SMS", text: "Thiết bị nhận OTP cho thao tác đăng ký điện thoại mới.", clues: ["c4_otp"], waitBefore: 2 },
+      { id: "c4_b4", sender: "scammer", senderName: "Tổng đài Đông Hải", text: "Anh đọc sáu số vừa nhận. Nếu chậm hệ thống sẽ không hoàn được tiền.", clues: [], waitBefore: 1 },
     ],
     redHerringClues: [],
-    deadlineMinutes: 8
+    deadlineMinutes: 9,
   },
+
   c5_emergency: {
     id: "c5_emergency",
-    title: "Cấp cứu",
+    day: 3,
+    title: "Cuộc gọi cấp cứu",
+    brief: "Giọng nói tổng hợp giả người thân nhằm ép chuyển viện phí vào tài khoản cá nhân.",
     type: "call",
-    tactics: ["Hoảng loạn", "Giả danh giáo viên"],
-    learningObjective: "Giữ bình tĩnh và xác minh qua kênh độc lập khi nhận tin cấp cứu.",
+    isScam: true,
+    victim: { id: "victim_dung", name: "Chú Dũng", moneyAtRisk: 30_000_000 },
+    tactics: ["Hoảng loạn", "Deepfake giọng nói"],
+    learningObjective: "Dừng lại và xác minh qua một kênh độc lập hoặc mật khẩu gia đình.",
     evidenceBase: {
-      c5_transcript: {
-        id: "c5_transcript",
-        label: "Đoạn ghi âm",
+      c5_voice: {
+        id: "c5_voice",
+        label: "Phổ giọng nói",
         entityType: "transcript",
-        displayValue: "Voice chứa tạp âm bệnh viện, giọng nói có dấu hiệu cắt ghép bằng AI.",
-        lookupResult: "Quét phổ thanh âm phát hiện dấu vết sinh tự động bằng Deepfake.",
-        relatedEntityIds: [],
-        educationalNote: "Kẻ lừa đảo dùng AI để giả giọng người nhà."
+        displayValue: "VOICE-SYNTH-DEMO / 42% PHASE BREAK",
+        lookupResult: "Có nhịp thở lặp và điểm nối bất thường, phù hợp với giọng tổng hợp mô phỏng.",
+        relatedEntityIds: ["c5_account", "c5_identity"],
+        educationalNote: "Giọng giống người thân không còn là bằng chứng đủ mạnh trong thời đại deepfake.",
       },
       c5_account: {
         id: "c5_account",
-        label: "STK Viện phí",
+        label: "Tài khoản viện phí",
         entityType: "bankAccount",
-        displayValue: "11223344 (TRẦN VĂN B)",
-        lookupResult: "Tài khoản cá nhân. Bệnh viện luôn thu qua số tài khoản doanh nghiệp.",
-        relatedEntityIds: ["c1_account"],
-        educationalNote: "Bệnh viện không yêu cầu nộp viện phí vào tài khoản cá nhân của bác sĩ."
-      }
+        displayValue: "ML-1122-3344 / NGƯỜI NHẬN B",
+        lookupResult: "Tài khoản cá nhân mô phỏng có tuyến chuyển tiếp tới cùng cụm mule account của C1.",
+        relatedEntityIds: ["c5_voice", "c1_account"],
+        educationalNote: "Bệnh viện hợp pháp không yêu cầu chuyển viện phí khẩn vào tài khoản cá nhân lạ.",
+      },
+      c5_identity: {
+        id: "c5_identity",
+        label: "Danh tính người gọi",
+        entityType: "identityClaim",
+        displayValue: "GIÁO-VIÊN-DEMO / KHÔNG KHỚP DANH BẠ",
+        lookupResult: "Tên và số liên lạc không khớp hồ sơ liên hệ khẩn cấp của trường Ánh Dương Fictional.",
+        relatedEntityIds: ["c5_voice"],
+        educationalNote: "Hãy tự gọi lại nhà trường hoặc người thân qua số đã lưu từ trước.",
+      },
     },
     beats: [
-      { id: "b1", sender: 'scammer', senderName: 'Thầy giáo', text: "Chị ơi, cháu bị ngã cầu thang ở trường, đang cấp cứu trong Việt Đức. Tình trạng nguy kịch.", clues: ["c5_transcript"], waitBefore: 0 },
-      { id: "b2", sender: 'scammer', senderName: 'Thầy giáo', text: "Bác sĩ yêu cầu tạm ứng mổ gấp 30 triệu. Chị chuyển vào STK này để tôi nộp viện phí luôn.", clues: ["c5_account"], waitBefore: 1 }
+      { id: "c5_b1", sender: "scammer", senderName: "Giáo viên chủ nhiệm", text: "Chú Dũng ơi, con chú vừa gặp tai nạn ở trường. Cháu đang được đưa vào phòng mổ.", clues: ["c5_identity"], waitBefore: 0 },
+      { id: "c5_b2", sender: "system", senderName: "PHÂN TÍCH ÂM THANH", text: "Luồng thoại có các đoạn lặp vi mô và nhịp thở không tự nhiên.", clues: ["c5_voice"], waitBefore: 1 },
+      { id: "c5_b3", sender: "scammer", senderName: "Giáo viên chủ nhiệm", text: "Bệnh viện yêu cầu tạm ứng 30 triệu. Chú chuyển ngay để bác sĩ mổ nhé.", clues: ["c5_account"], waitBefore: 1 },
+      { id: "c5_b4", sender: "scammer", senderName: "Giáo viên chủ nhiệm", text: "Đừng gọi cho ai lúc này, điện thoại của cháu đã được niêm phong.", clues: [], waitBefore: 1 },
     ],
-    redHerringClues: [],
-    deadlineMinutes: 5
+    redHerringClues: ["c5_voice"],
+    deadlineMinutes: 7,
   },
+
   c6_school_refund: {
     id: "c6_school_refund",
-    title: "Hoàn phí học kỳ",
+    day: 3,
+    title: "Cổng hoàn phí học kỳ",
+    brief: "Một cổng sinh viên giả là mắt xích cuối cùng nối các domain của CÒ XÁM.",
     type: "social",
-    tactics: ["Lợi ích tài chính", "Cơ quan giáo dục"],
-    learningObjective: "Xác minh với nhà trường trước khi thao tác trên web lạ.",
+    isScam: true,
+    victim: { id: "victim_mai", name: "Mai", moneyAtRisk: 12_000_000 },
+    tactics: ["Mạo danh tổ chức", "Lợi ích tài chính"],
+    learningObjective: "Xác minh thông báo tài chính với nhà trường qua cổng chính thức.",
     evidenceBase: {
       c6_domain: {
         id: "c6_domain",
-        label: "Cổng sinh viên",
+        label: "Cổng hoàn phí",
         entityType: "domain",
-        displayValue: "hoan-phi-hoc-vu-2024.test",
-        lookupResult: "Domain trỏ về chung IP với vietship-pay.test và các trang phishing khác.",
-        relatedEntityIds: ["c1_domain", "coxam_ip"],
-        educationalNote: "Thủ đoạn chung của mạng lưới CÒ XÁM."
+        displayValue: "hoanphi-namphong.test",
+        lookupResult: "Domain mô phỏng dùng chung certificate fingerprint với C1, C3 và C4.",
+        relatedEntityIds: ["c6_certificate", "c6_device", "c1_domain", "c3_domain", "c4_app"],
+        educationalNote: "Thông báo hoàn tiền bất ngờ phải được xác minh trực tiếp với cơ sở đào tạo.",
+      },
+      c6_certificate: {
+        id: "c6_certificate",
+        label: "Certificate fingerprint",
+        entityType: "deviceFingerprint",
+        displayValue: "CERT-DEMO-C0-X4M-77",
+        lookupResult: "Fingerprint trùng với cụm hạ tầng đã gắn nhãn CÒ XÁM.",
+        relatedEntityIds: ["c6_domain", "c6_device"],
+        educationalNote: "Hạ tầng kỹ thuật dùng chung có thể nối nhiều chiến dịch tưởng như độc lập.",
       },
       c6_device: {
         id: "c6_device",
-        label: "Device Fingerprint",
+        label: "Thiết bị điều phối",
         entityType: "deviceFingerprint",
-        displayValue: "Thiết bị dùng để nhắn tin khớp với IMEI vụ shipper giả.",
-        lookupResult: "Cùng một đối tượng thực hiện vụ C1 và C6.",
-        relatedEntityIds: ["coxam_device", "c1_phone"],
-        educationalNote: ""
-      }
+        displayValue: "DEVICE-DEMO-404-COXAM",
+        lookupResult: "Thiết bị mô phỏng từng đăng nhập bảng điều khiển của nhiều domain trong campaign.",
+        relatedEntityIds: ["c6_domain", "c6_certificate", "c1_phone"],
+        educationalNote: "Graph nhiều nguồn giúp tăng độ chắc chắn trước khi chuyển giao cơ quan chức năng.",
+      },
     },
     beats: [
-      { id: "b1", sender: 'scammer', senderName: 'Phòng Tài Chính - ĐH XYZ', text: "Thông báo hoàn trả học phí đợt 1. Bạn được hoàn 2,500,000 VND.", clues: ["c6_device"], waitBefore: 0 },
-      { id: "b2", sender: 'scammer', senderName: 'Phòng Tài Chính - ĐH XYZ', text: "Vui lòng đăng nhập hoan-phi-hoc-vu-2024.test để xác nhận thẻ nhận tiền.", clues: ["c6_domain"], waitBefore: 1 }
+      { id: "c6_b1", sender: "scammer", senderName: "Phòng tài chính Nam Phong", text: "Bạn Mai thuộc danh sách được hoàn 2,5 triệu học phí kỳ này.", clues: ["c6_device"], waitBefore: 0 },
+      { id: "c6_b2", sender: "scammer", senderName: "Phòng tài chính Nam Phong", text: "Đăng nhập hoanphi-namphong.test và nhập thông tin thẻ để nhận tiền.", clues: ["c6_domain"], waitBefore: 1 },
+      { id: "c6_b3", sender: "system", senderName: "MẮT LƯỚI", text: "Certificate vừa quan sát khớp cụm hạ tầng của bốn hồ sơ trước.", clues: ["c6_certificate"], waitBefore: 2 },
+      { id: "c6_b4", sender: "operator", senderName: "ĐIỀU PHỐI AN", text: "Nếu nối đủ các node, ta có thể chuyển toàn bộ mạng CÒ XÁM sang hồ sơ triệt phá.", clues: [], waitBefore: 1 },
     ],
     redHerringClues: [],
-    deadlineMinutes: 12
-  }
+    deadlineMinutes: 13,
+  },
 };
+
+export const DAY_SCENARIOS: Record<1 | 2 | 3, readonly string[]> = {
+  1: ["c1_qr_delivery", "c2_legit_shipper"],
+  2: ["c3_commission", "c4_bank_impersonation"],
+  3: ["c5_emergency", "c6_school_refund"],
+};
+
+export function getDayScenarioIds(day: number): readonly string[] {
+  if (day === 1 || day === 2 || day === 3) return DAY_SCENARIOS[day];
+  return [];
+}

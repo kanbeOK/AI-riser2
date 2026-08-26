@@ -1,18 +1,18 @@
 # Deployment Guide
 
-Ứng dụng PHANH! được tối ưu để triển khai qua Google Cloud Run với một container duy nhất (chứa cả Express Server và tĩnh Vite SPA).
+Ứng dụng MẮT LƯỚI được tối ưu để triển khai qua Google Cloud Run với một container duy nhất (chứa cả Express Server và tĩnh Vite SPA).
 
 ## 1. Yêu cầu hệ thống
-- `NODE_ENV=production`
-- `PORT` (được Cloud Run tự động tiêm vào, mặc định 3000)
-- `GEMINI_API_KEY` (Secret Manager)
+- `NODE_ENV=production` (script `npm start` đã tự thiết lập)
+- `PORT` (được Cloud Run tự động tiêm vào, mặc định 8080)
+- `GEMINI_API_KEY` (tùy chọn; nên lưu trong Secret Manager)
 - Google Cloud Artifact Registry đã được kích hoạt.
 
 ## 2. Kiểm tra trước khi triển khai (Local Verification)
 Đảm bảo mã nguồn vượt qua toàn bộ Typecheck, Test và Build:
 \`\`\`bash
 npm run verify
-PORT=8080 NODE_ENV=production npm start
+PORT=8080 npm start
 \`\`\`
 Kiểm tra endpoint sức khỏe:
 \`\`\`bash

@@ -1,92 +1,248 @@
-import React, { useState } from 'react';
-import { CampaignState, GameAction } from '../../game/state/types';
-import { FeedMonitor } from './FeedMonitor';
-import { EvidenceTray } from './EvidenceTray';
-import { InvestigationOverlay } from './InvestigationOverlay';
-import { Radio } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { FastForward, LogOut, Pause, Play, Radio, ScanLine } from "lucide-react";
+import { getDayScenarioIds, SCENARIOS } from "../../game/content/scenarios";
+import type { CampaignState, GameAction, GameSpeed } from "../../game/state/types";
+import { EvidenceTray } from "./EvidenceTray";
+import { FeedMonitor } from "./FeedMonitor";
+import { InvestigationOverlay } from "./InvestigationOverlay";
 
-export function Workstation({ state, dispatch }: { state: CampaignState, dispatch: React.Dispatch<GameAction> }) {
+type WorkstationProps = {
+  state: CampaignState;
+  dispatch: React.Dispatch<GameAction>;
+};
+
+function formatTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60).toString().padStart(2, "0");
+  const mins = (minutes % 60).toString().padStart(2, "0");
+  return `${hours}:${mins}`;
+}
+
+export function Workstation({ state, dispatch }: WorkstationProps) {
   const [focusedFeedId, setFocusedFeedId] = useState<string | null>(null);
-  const [activeOverlay, setActiveOverlay] = useState<'osint' | 'graph' | 'case' | null>(null);
+  const [activeOverlay, setActiveOverlay] = useState<"osint" | "graph" | "case" | null>(null);
   const [focusedCaseId, setFocusedCaseId] = useState<string | null>(null);
 
-  const feeds = Object.values(state.feeds);
-  
-  // If no focused feed, default to the first active one, or just null
-  const mainFeed = feeds.find(f => f.id === focusedFeedId) || feeds.find(f => f.status === 'active') || feeds[0];
-  const sideFeeds = feeds.filter(f => f.id !== mainFeed?.id);
+  const dayScenarioIds = getDayScenarioIds(state.day);
+  const feeds = useMemo(
+    () =>
+      dayScenarioIds
+        .map((scenarioId) => state.feeds[scenarioId])
+        .filter((feed): feed is NonNullable<typeof feed> => Boolean(feed)),
+    [dayScenarioIds, state.feeds],
+  );
 
-  const formatTime = (mins: number) => {
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+  const mainFeed =
+    feeds.find((feed) => feed.id === focusedFeedId) ??
+    feeds.find((feed) => feed.status === "active") ??
+    feeds[0];
+  const sideFeeds = feeds.filter((feed) => feed.id !== mainFeed?.id);
+  const initialSweepComplete = feeds.length === dayScenarioIds.length;
+
+  useEffect(() => {
+    if (!focusedFeedId && feeds[0]) setFocusedFeedId(feeds[0].id);
+  }, [feeds, focusedFeedId]);
+
+  const openCase = (caseId: string) => {
+    setFocusedCaseId(caseId);
+    setActiveOverlay("case");
   };
 
+  if (state.phase === "morning") {
+    return (
+      <main className="briefing-screen">
+        <div className="briefing-noise" aria-hidden="true" />
+        <section className="briefing-terminal">
+          <header>
+            <div>
+              <span className="eyebrow">MẮT LƯỚI / LỆNH CA ĐÊM</span>
+              <h1>Đêm {state.day}: bắt tín hiệu trước khi nó biến mất</h1>
+            </div>
+            <div className="briefing-clock">{formatTime(state.minuteOfDay)}</div>
+          </header>
+          <div className="briefing-body">
+            <div className="operator-portrait" aria-hidden="true">
+              <Radio />
+              <span>AN / ĐIỀU PHỐI</span>
+            </div>
+            <div className="briefing-copy">
+              <p>
+                Hai luồng sẽ chạy song song. Tập trung quá lâu vào một cửa sổ có thể khiến luồng còn lại vượt hạn.
+                Chỉ can thiệp khi bằng chứng đủ mạnh.
+              </p>
+              <div className="briefing-targets">
+                {dayScenarioIds.map((scenarioId, index) => {
+                  const scenario = SCENARIOS[scenarioId];
+                  if (!scenario) return null;
+                  return (
+                    <article key={scenarioId}>
+                      <span>0{index + 1}</span>
+                      <div>
+                        <strong>{scenario.title}</strong>
+                        <p>{scenario.brief}</p>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <button
+                className="primary-cta briefing-start"
+                onClick={() => dispatch({ type: "START_SHIFT" })}
+              >
+                <Play size={18} /> Bắt đầu ca trực
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <div className="h-screen w-screen bg-[#07090C] text-[#EDF2EE] font-sans flex flex-col overflow-hidden">
-      {/* Top Bar / Desk Edge */}
-      <div className="h-12 border-b border-[#2A363D] bg-[#10171C] flex items-center justify-between px-6 flex-shrink-0">
-         <div className="flex items-center gap-4 text-xs font-mono tracking-widest text-[#86949B]">
-            <span className="text-[#63E6C5] font-bold">MẮT LƯỚI - TRẠM #404</span>
-            <span>NGÀY {state.day}</span>
-            <span>{formatTime(state.minuteOfDay)}</span>
-         </div>
-         <div className="flex items-center gap-4">
-            <button onClick={() => dispatch({ type: 'CHANGE_LOCATION', payload: { location: 'apartment' } })} className="text-xs uppercase tracking-widest text-[#E7A64A] hover:text-white transition-colors border border-[#E7A64A] px-3 py-1 rounded">
-               Rời bàn làm việc
+    <main className="workstation-shell">
+      <header className="workstation-header">
+        <div className="station-identity">
+          <ScanLine size={18} />
+          <div>
+            <strong>MẮT LƯỚI / TRẠM 404</strong>
+            <span>ĐÊM {state.day} · {formatTime(state.minuteOfDay)}</span>
+          </div>
+        </div>
+
+        <div className="resource-strip" aria-label="Tài nguyên chiến dịch">
+          <div><span>Uy tín</span><strong>{state.agencyTrust}%</strong></div>
+          <div><span>Nhiệt</span><strong>{state.networkHeat}%</strong></div>
+          <div><span>Năng lượng</span><strong>{Math.round(state.energy)}%</strong></div>
+          <div><span>CR</span><strong>{state.credits}</strong></div>
+        </div>
+
+        <div className="time-controls" aria-label="Điều khiển thời gian">
+          <button
+            aria-label="Tạm dừng thời gian"
+            className={state.speed === 0 ? "active" : ""}
+            onClick={() => dispatch({ type: "SET_SPEED", payload: { speed: 0 } })}
+          >
+            <Pause size={15} />
+          </button>
+          {([1, 2, 4] as GameSpeed[]).map((speed) => (
+            <button
+              key={speed}
+              aria-label={speed === 1 ? "Tiếp tục thời gian" : `Tăng tốc ${speed} lần`}
+              className={state.speed === speed ? "active" : ""}
+              onClick={() => dispatch({ type: "SET_SPEED", payload: { speed } })}
+            >
+              {speed === 1 ? <Play size={15} /> : <FastForward size={15} />}
+              <span>{speed}×</span>
             </button>
-         </div>
-      </div>
+          ))}
+        </div>
+      </header>
 
-      <div className="flex-1 flex relative p-4 gap-4 overflow-hidden">
-         {/* Main Monitor */}
-         <div className="flex-1 border border-[#2A363D] bg-[#10171C] rounded-lg shadow-2xl overflow-hidden relative flex flex-col">
-            {mainFeed ? (
-               <FeedMonitor feed={mainFeed} state={state} dispatch={dispatch} isMain={true} onOpenCase={() => { setFocusedCaseId(mainFeed.id); setActiveOverlay('case'); }} />
-            ) : (
-               <div className="flex-1 flex items-center justify-center text-[#86949B] font-mono opacity-50 uppercase tracking-widest">Không có tín hiệu</div>
-            )}
-         </div>
+      {state.speed === 0 && (
+        <div className="paused-banner" role="status">
+          THỜI GIAN ĐANG TẠM DỪNG — BẤM 1× ĐỂ TIẾP TỤC
+        </div>
+      )}
 
-         {/* Side Monitors */}
-         <div className="w-80 flex flex-col gap-4 overflow-y-auto pr-2 pb-4">
-            {sideFeeds.map(feed => (
-               <div key={feed.id} className="h-64 border border-[#2A363D] bg-[#10171C] rounded-lg shadow cursor-pointer hover:border-[#63E6C5] transition-colors relative" onClick={() => setFocusedFeedId(feed.id)}>
-                  <div className="absolute inset-0 pointer-events-none">
-                     <FeedMonitor feed={feed} state={state} dispatch={dispatch} isMain={false} onOpenCase={() => {}} />
-                  </div>
-                  <div className="absolute inset-0 bg-black/40 hover:bg-transparent transition-colors"></div>
-               </div>
-            ))}
-            
-            {/* Dispatch Radio */}
-            <div className="mt-auto border border-[#2A363D] bg-[#10171C] p-4 rounded-lg flex flex-col gap-2">
-               <div className="flex items-center gap-2 text-[#E7A64A] font-mono text-xs uppercase tracking-widest border-b border-[#2A363D] pb-2">
-                  <Radio size={14} className="animate-pulse" /> Bộ đàm
-               </div>
-               <div className="h-24 overflow-y-auto text-xs text-[#86949B] font-mono flex flex-col gap-1">
-                  {state.notifications.slice(-4).map(n => (
-                     <div key={n.id} className={`${n.type === 'error' ? 'text-[#FF5B5B]' : n.type === 'success' ? 'text-[#63E6C5]' : n.type === 'warning' ? 'text-[#E7A64A]' : 'text-[#86949B]'}`}>
-                        [{formatTime(n.time)}] {n.message}
-                     </div>
-                  ))}
-               </div>
+      <section className="signal-desk">
+        <div className="main-monitor">
+          <div className="monitor-frame-label">
+            <span>FOCUS / {mainFeed?.id ?? "NO SIGNAL"}</span>
+            <span className="monitor-rec">REC</span>
+          </div>
+          {mainFeed ? (
+            <FeedMonitor
+              feed={mainFeed}
+              state={state}
+              dispatch={dispatch}
+              isMain
+              onOpenCase={() => openCase(mainFeed.id)}
+            />
+          ) : (
+            <div className="scanning-state">
+              <div className="scan-reticle" aria-hidden="true" />
+              <strong>Đang quét băng tần</strong>
+              <p>Tín hiệu đầu tiên sẽ xuất hiện sau một phút game.</p>
             </div>
-         </div>
-         
-         {/* Overlays */}
-         {activeOverlay && (
-            <div className="absolute inset-0 z-40 bg-[#07090C]/80 backdrop-blur-sm flex items-center justify-center p-8">
-               <div className="w-full h-full max-w-6xl max-h-[800px] bg-[#10171C] border border-[#2A363D] rounded-xl shadow-2xl flex flex-col overflow-hidden relative">
-                  <button onClick={() => setActiveOverlay(null)} className="absolute top-4 right-6 text-[#86949B] hover:text-white z-50 text-xl font-bold">&times;</button>
-                  <InvestigationOverlay type={activeOverlay} state={state} dispatch={dispatch} focusedCaseId={focusedCaseId} />
-               </div>
-            </div>
-         )}
-      </div>
+          )}
+        </div>
 
-      {/* Evidence Tray pinned at bottom */}
-      <EvidenceTray state={state} dispatch={dispatch} onOpenTool={(tool) => setActiveOverlay(tool)} />
-    </div>
+        <aside className="side-monitor-stack">
+          <div className="side-stack-heading">
+            <span>LUỒNG NỀN</span>
+            <strong>{sideFeeds.length.toString().padStart(2, "0")}</strong>
+          </div>
+          {sideFeeds.map((feed) => (
+            <button
+              key={feed.id}
+              className="side-monitor"
+              onClick={() => setFocusedFeedId(feed.id)}
+              aria-label={`Tập trung tín hiệu ${feed.title}`}
+            >
+              <FeedMonitor
+                feed={feed}
+                state={state}
+                dispatch={dispatch}
+                isMain={false}
+                onOpenCase={() => openCase(feed.id)}
+              />
+            </button>
+          ))}
+
+          <section className="radio-log" aria-label="Bộ đàm điều phối">
+            <header><Radio size={15} /> Bộ đàm / AN</header>
+            <div>
+              {state.notifications.slice(-5).map((item) => (
+                <p key={item.id} className={`radio-${item.type}`}>
+                  <span>{formatTime(item.time)}</span>{item.message}
+                </p>
+              ))}
+              {state.notifications.length === 0 && <p>Giữ kênh mở. Chờ tín hiệu.</p>}
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <EvidenceTray
+        state={state}
+        onOpenTool={(tool) => setActiveOverlay(tool)}
+      />
+
+      <footer className="shift-footer">
+        <button onClick={() => dispatch({ type: "RETURN_TO_APARTMENT" })}>
+          <LogOut size={15} /> Tạm rời bàn
+        </button>
+        <div>
+          <span>{Object.values(state.cases).filter((item) => item.day === state.day && item.status !== "open").length}/{dayScenarioIds.length} hồ sơ đã khép</span>
+          <button
+            className="end-shift-button"
+            disabled={!initialSweepComplete}
+            onClick={() => dispatch({ type: "END_SHIFT" })}
+            title={initialSweepComplete ? "Khép các hồ sơ còn mở và về căn hộ" : "Chờ đủ hai tín hiệu đầu ca"}
+          >
+            {initialSweepComplete ? "Kết thúc ca" : "Đang quét đầu ca"}
+          </button>
+        </div>
+      </footer>
+
+      {activeOverlay && (
+        <div className="investigation-backdrop" role="dialog" aria-modal="true">
+          <section className="investigation-window">
+            <button
+              className="overlay-close"
+              onClick={() => setActiveOverlay(null)}
+              aria-label="Đóng công cụ điều tra"
+            >
+              ×
+            </button>
+            <InvestigationOverlay
+              type={activeOverlay}
+              state={state}
+              dispatch={dispatch}
+              focusedCaseId={focusedCaseId}
+            />
+          </section>
+        </div>
+      )}
+    </main>
   );
 }

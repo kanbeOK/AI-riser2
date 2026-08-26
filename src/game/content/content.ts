@@ -1,35 +1,40 @@
-export type EntityType = "domain" | "phone" | "bankAccount" | "qrPayload" | "transaction" | "callerMetadata" | "deviceFingerprint" | "transcript" | "identityClaim";
+import type { EntityType, FeedState } from "../state/types";
 
 export type EvidenceTemplate = {
-  id: string; // The static ID of the evidence (e.g. 'c1_domain')
-  label: string; // Short label
+  id: string;
+  label: string;
   entityType: EntityType;
-  displayValue: string; // The full value seen
-  lookupResult: string | null; // Result when OSINT tool used
-  relatedEntityIds: string[]; // For drawing graph links
+  displayValue: string;
+  lookupResult: string | null;
+  relatedEntityIds: string[];
   educationalNote: string;
 };
 
 export type StoryBeat = {
   id: string;
-  sender: 'scammer' | 'system';
+  sender: "scammer" | "system" | "operator";
   senderName: string;
   text: string;
-  clues: string[]; // List of EvidenceTemplate IDs that are attached to this message
-  waitBefore: number; // In-game minutes to wait before this beat appears
+  clues: string[];
+  waitBefore: number;
 };
 
 export type ScenarioDefinition = {
   id: string;
+  day: 1 | 2 | 3;
   title: string;
-  type: "chat" | "call" | "transaction" | "social";
+  brief: string;
+  type: FeedState["type"];
+  isScam: boolean;
+  victim: {
+    id: string;
+    name: string;
+    moneyAtRisk: number;
+  };
   tactics: string[];
   learningObjective: string;
   evidenceBase: Record<string, EvidenceTemplate>;
   beats: StoryBeat[];
   redHerringClues: string[];
-  deadlineMinutes: number; // How many minutes until failure if no intervention
-};
-
-export const SCENARIOS: Record<string, ScenarioDefinition> = {
+  deadlineMinutes: number;
 };

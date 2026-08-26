@@ -1,96 +1,134 @@
-import React from 'react';
-import { CampaignState, GameAction } from '../../game/state/types';
-import { ShieldAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FileWarning, ShieldAlert } from "lucide-react";
+import { SCENARIOS } from "../../game/content/scenarios";
+import type { CampaignState, GameAction, Verdict } from "../../game/state/types";
 
-export function CaseView({ state, dispatch, caseId }: { state: CampaignState, dispatch: React.Dispatch<GameAction>, caseId: string | null }) {
-  if (!caseId) return <div className="p-8 text-center text-[#86949B]">Chưa chọn hồ sơ</div>;
-  const c = state.cases[caseId];
-  if (!c) return <div className="p-8 text-center text-[#86949B]">Không tìm thấy hồ sơ</div>;
+type CaseViewProps = {
+  state: CampaignState;
+  dispatch: React.Dispatch<GameAction>;
+  caseId: string | null;
+};
 
-  const caseEvidence = state.evidence.filter(e => c.evidenceIds.includes(e.id));
-  const entityTypes = new Set(caseEvidence.map(e => e.entityType));
-  const hasLink = state.graphEdges.some(edge => c.evidenceIds.includes(edge.sourceId) || c.evidenceIds.includes(edge.targetId));
+export function CaseView({ state, dispatch, caseId }: CaseViewProps) {
+  if (!caseId) return <div className="tool-empty-state">Chưa chọn hồ sơ.</div>;
+  const caseFile = state.cases[caseId];
+  const scenario = SCENARIOS[caseId];
+  if (!caseFile || !scenario) return <div className="tool-empty-state">Không tìm thấy hồ sơ.</div>;
 
-  const handleAction = (action: 'warned' | 'frozen' | 'banned' | 'escalated' | 'ignored') => {
-     dispatch({ type: 'OPERATIONAL_ACTION', payload: { caseId, action } });
+  const evidence = state.evidence.filter((item) => caseFile.evidenceIds.includes(item.id));
+  const entityTypeCount = new Set(evidence.map((item) => item.entityType)).size;
+  const hasLink = state.graphEdges.some(
+    (edge) => caseFile.evidenceIds.includes(edge.sourceId) && caseFile.evidenceIds.includes(edge.targetId),
+  );
+
+  const decide = (verdict: Verdict) => {
+    dispatch({ type: "OPERATIONAL_ACTION", payload: { caseId, action: verdict } });
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8 font-mono flex flex-col gap-8">
-       <div className="border-b border-[#2A363D] pb-4">
-          <h2 className="text-2xl font-bold text-[#EDF2EE] uppercase tracking-widest">{c.title}</h2>
-          <div className="text-sm text-[#86949B]">MÃ HỒ SƠ: {c.id} | TRẠNG THÁI: <span className={c.status === 'open' ? 'text-[#E7A64A]' : 'text-[#63E6C5]'}>{c.status.toUpperCase()}</span></div>
-       </div>
+    <div className="case-view">
+      <header className="tool-header case-tool-header">
+        <div>
+          <span>HỒ SƠ / {caseFile.id}</span>
+          <h2>{caseFile.title}</h2>
+          <p>{scenario.brief}</p>
+        </div>
+        <div className={`case-state case-state-${caseFile.status}`}>{caseFile.status.toUpperCase()}</div>
+      </header>
 
-       <div>
-          <h3 className="text-[#63E6C5] font-bold uppercase tracking-widest mb-4">Bằng chứng thu thập ({caseEvidence.length})</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             {caseEvidence.map(ev => (
-                <div key={ev.id} className="border border-[#2A363D] bg-[#172127] p-4 rounded flex flex-col gap-2">
-                   <div className="text-[10px] text-[#E7A64A] font-bold uppercase">{ev.entityType}</div>
-                   <div className="text-sm text-[#EDF2EE]">{ev.displayValue || ev.value}</div>
-                   {ev.lookupResult && (
-                      <div className="text-xs text-[#86949B] bg-[#07090C] p-2 rounded mt-2 border border-[#2A363D]">
-                         {ev.lookupResult}
-                      </div>
-                   )}
-                </div>
-             ))}
-             {caseEvidence.length === 0 && <div className="text-[#86949B] italic text-sm">Chưa có bằng chứng nào được ghim vào hồ sơ này.</div>}
+      <div className="case-content">
+        <section className="case-evidence-column">
+          <div className="subheading">
+            <span>01</span>
+            <h3>Chuỗi bằng chứng</h3>
           </div>
-       </div>
-
-       {c.status === 'open' && (
-          <div>
-             <h3 className="text-[#FF5B5B] font-bold uppercase tracking-widest mb-4">Can thiệp & Quyết định</h3>
-             <div className="flex flex-col gap-4">
-                
-                {/* Action 1: Bỏ qua */}
-                <div className="border border-[#2A363D] p-4 flex justify-between items-center rounded bg-[#172127]">
-                   <div>
-                      <div className="font-bold text-[#EDF2EE]">BỎ QUA / ĐÓNG HỒ SƠ</div>
-                      <div className="text-xs text-[#86949B]">Hồ sơ này không có dấu hiệu vi phạm hoặc là báo cáo nhầm.</div>
-                   </div>
-                   <button onClick={() => handleAction('ignored')} className="bg-[#2A363D] text-[#EDF2EE] px-4 py-2 rounded font-bold hover:bg-[#86949B] transition-colors uppercase tracking-widest text-xs">
-                      Xác nhận bỏ qua
-                   </button>
-                </div>
-
-                {/* Action 2: Cảnh báo */}
-                <div className="border border-[#2A363D] p-4 flex justify-between items-center rounded bg-[#172127]">
-                   <div>
-                      <div className="font-bold text-[#E7A64A]">CẢNH BÁO NẠN NHÂN</div>
-                      <div className="text-xs text-[#86949B]">Yêu cầu: Ít nhất 1 bằng chứng. Hiệu tại: {caseEvidence.length}/1</div>
-                   </div>
-                   <button disabled={caseEvidence.length < 1} onClick={() => handleAction('warned')} className="bg-[#E7A64A] text-black px-4 py-2 rounded font-bold disabled:opacity-50 hover:bg-yellow-500 transition-colors uppercase tracking-widest text-xs">
-                      Gửi cảnh báo
-                   </button>
-                </div>
-
-                {/* Action 3: Đóng băng */}
-                <div className="border border-[#2A363D] p-4 flex justify-between items-center rounded bg-[#172127]">
-                   <div>
-                      <div className="font-bold text-[#FF5B5B]">ĐÓNG BĂNG TÀI KHOẢN ĐÍCH</div>
-                      <div className="text-xs text-[#86949B]">Yêu cầu: 2 bằng chứng & 1 liên kết đồ thị. Hiện tại: {caseEvidence.length}/2 bằng chứng, {hasLink ? 'Đã có' : 'Chưa có'} liên kết.</div>
-                   </div>
-                   <button disabled={caseEvidence.length < 2 || !hasLink} onClick={() => handleAction('frozen')} className="bg-[#FF5B5B] text-black px-4 py-2 rounded font-bold disabled:opacity-50 hover:bg-red-500 transition-colors uppercase tracking-widest text-xs">
-                      Yêu cầu đóng băng
-                   </button>
-                </div>
-
-                {/* Action 4: Ban / Escalated */}
-                <div className="border border-[#2A363D] p-4 flex justify-between items-center rounded bg-[#172127]">
-                   <div>
-                      <div className="font-bold text-[#FF5B5B]">CHUYỂN GIAO CƠ QUAN CHỨC NĂNG</div>
-                      <div className="text-xs text-[#86949B]">Yêu cầu: 3 bằng chứng & 2 loại thực thể. Hiện tại: {caseEvidence.length}/3 bằng chứng, {entityTypes.size}/2 loại.</div>
-                   </div>
-                   <button disabled={caseEvidence.length < 3 || entityTypes.size < 2} onClick={() => handleAction('escalated')} className="bg-[#FF5B5B] text-black px-4 py-2 rounded font-bold disabled:opacity-50 hover:bg-red-500 transition-colors uppercase tracking-widest text-xs flex items-center gap-2">
-                      <ShieldAlert size={14} /> Triệt phá
-                   </button>
-                </div>
-             </div>
+          {evidence.length === 0 ? (
+            <div className="tool-empty-state compact">Chưa có bằng chứng được niêm phong từ tín hiệu.</div>
+          ) : (
+            <div className="case-evidence-list">
+              {evidence.map((item) => (
+                <article key={item.id}>
+                  <div className="evidence-index">{item.entityType}</div>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <p>{item.value}</p>
+                    <small className={item.lookedUp ? "verified" : "pending"}>
+                      {item.lookedUp ? "Đã đối chiếu OSINT" : "Chưa đối chiếu OSINT"}
+                    </small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+          <div className="learning-note">
+            <CheckCircle2 size={17} />
+            <p><strong>Điểm học:</strong> {scenario.learningObjective}</p>
           </div>
-       )}
+        </section>
+
+        <section className="intervention-column">
+          <div className="subheading">
+            <span>02</span>
+            <h3>Quyết định can thiệp</h3>
+          </div>
+
+          {caseFile.status !== "open" ? (
+            <div className={`decision-result decision-${caseFile.status}`}>
+              {caseFile.status === "resolved" ? <CheckCircle2 /> : <AlertTriangle />}
+              <div>
+                <strong>Hồ sơ đã khép</strong>
+                <p>Quyết định: {caseFile.verdict?.toUpperCase() ?? "KHÔNG CÓ"}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="decision-list">
+              <article>
+                <div className="decision-copy">
+                  <span className="decision-level neutral">MỨC 0</span>
+                  <strong>Bỏ qua tín hiệu</strong>
+                  <p>Dùng khi dữ kiện cho thấy đây là hoạt động hợp pháp.</p>
+                </div>
+                <button onClick={() => decide("ignored")}>Xác nhận hợp pháp</button>
+              </article>
+
+              <article>
+                <div className="decision-copy">
+                  <span className="decision-level caution">MỨC 1</span>
+                  <strong>Cảnh báo nạn nhân</strong>
+                  <p>Cần 1 bằng chứng · Hiện có {evidence.length}/1</p>
+                </div>
+                <button disabled={evidence.length < 1} onClick={() => decide("warned")}>
+                  <FileWarning size={15} /> Cảnh báo nạn nhân
+                </button>
+              </article>
+
+              <article>
+                <div className="decision-copy">
+                  <span className="decision-level danger">MỨC 2</span>
+                  <strong>Đóng băng tài khoản</strong>
+                  <p>2 bằng chứng + 1 liên kết · {evidence.length}/2 · {hasLink ? "đã nối" : "chưa nối"}</p>
+                </div>
+                <button disabled={evidence.length < 2 || !hasLink} onClick={() => decide("frozen")}>
+                  Đóng băng mục tiêu
+                </button>
+              </article>
+
+              <article>
+                <div className="decision-copy">
+                  <span className="decision-level critical">MỨC 3</span>
+                  <strong>Chuyển hồ sơ triệt phá</strong>
+                  <p>3 bằng chứng + 2 loại · {evidence.length}/3 · {entityTypeCount}/2 loại</p>
+                </div>
+                <button
+                  disabled={evidence.length < 3 || entityTypeCount < 2}
+                  onClick={() => decide("escalated")}
+                >
+                  <ShieldAlert size={15} /> Chuyển cơ quan chức năng
+                </button>
+              </article>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

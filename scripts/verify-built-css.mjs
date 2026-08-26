@@ -24,7 +24,14 @@ if (content.includes('@tailwind utilities')) {
   process.exit(1);
 }
 
-const expectedClasses = ['flex', 'grid', 'bg-paper'];
+const expectedClasses = [
+  '.intro-screen',
+  '.apartment-screen',
+  '.workstation-shell',
+  '.investigation-backdrop',
+  '.debrief-screen',
+  '@media',
+];
 for (const cls of expectedClasses) {
   if (!content.includes(cls)) {
      console.error(`Missing expected utility class '${cls}' in built CSS`);

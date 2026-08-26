@@ -1,111 +1,209 @@
-import React, { useReducer, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router';
-import { campaignReducer, INITIAL_STATE } from './game/state/reducer';
-import { CampaignState, GameAction } from './game/state/types';
-import { Apartment } from './components/apartment/Apartment';
-import { Workstation } from './components/desktop/Workstation';
+import { useEffect, useReducer } from "react";
+import { BrowserRouter, Link, Route, Routes } from "react-router";
+import { Apartment } from "./components/apartment/Apartment";
+import { Workstation } from "./components/desktop/Workstation";
+import { SCENARIOS } from "./game/content/scenarios";
+import { campaignReducer, INITIAL_STATE } from "./game/state/reducer";
+import type { CampaignState } from "./game/state/types";
 
 function IntroScreen() {
   return (
-    <div className="min-h-screen bg-[#071018] text-white flex flex-col items-center justify-center p-6 text-center">
-      <h1 className="text-6xl md:text-8xl font-black font-serif tracking-tighter mb-6 text-white drop-shadow-md">PHANH! // MẮT LƯỚI</h1>
-      <p className="font-serif italic text-2xl md:text-3xl text-gray-400 mb-4">CA TRỰC 00:00</p>
-      <p className="font-sans text-sm tracking-widest uppercase opacity-60 mb-16 max-w-xl leading-relaxed">
-        Một ca trực. Sáu đường dây. Tiền nhà đến hạn.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 mb-16">
-        <Link to="/game?mode=solo" className="bg-[#45D6BF] text-[#080B0E] px-8 py-4 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-teal-400 transition-colors">
-          Bắt đầu ca trực
-        </Link>
-        <Link to="/game?mode=demo" className="border border-white/20 text-white px-8 py-4 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-white/10 transition-colors">
-          Trình diễn 90 giây
-        </Link>
-      </div>
-      <div className="text-xs uppercase tracking-widest opacity-40">MÔ PHỎNG AN TOÀN — KHÔNG GIÁM SÁT HOẶC GIAO DỊCH THẬT</div>
-    </div>
+    <main className="intro-screen">
+      <div className="intro-grid" aria-hidden="true" />
+      <div className="intro-signal intro-signal-a" aria-hidden="true" />
+      <div className="intro-signal intro-signal-b" aria-hidden="true" />
+
+      <section className="intro-copy">
+        <div className="eyebrow">PHANH! / AI RISER VIETNAM</div>
+        <h1>
+          MẮT LƯỚI
+          <span>CA TRỰC 03</span>
+        </h1>
+        <p className="intro-lead">
+          Sáu tín hiệu. Ba đêm. Một mạng lưới lừa đảo đang đổi hạ tầng trước bình minh.
+        </p>
+        <div className="intro-actions">
+          <Link className="primary-cta" to="/game?mode=solo">
+            Bắt đầu chiến dịch
+          </Link>
+          <Link className="secondary-cta" to="/game?mode=demo">
+            Demo 90 giây
+          </Link>
+        </div>
+        <p className="safety-note">
+          Mô phỏng giáo dục — toàn bộ danh tính, domain và giao dịch đều là dữ liệu hư cấu.
+        </p>
+      </section>
+
+      <aside className="intro-dossier" aria-label="Tóm tắt nhiệm vụ">
+        <div className="dossier-stamp">MẬT / ML-03</div>
+        <div className="dossier-row">
+          <span>Mục tiêu</span>
+          <strong>CÒ XÁM</strong>
+        </div>
+        <div className="dossier-row">
+          <span>Vai trò</span>
+          <strong>Điều tra viên từ xa</strong>
+        </div>
+        <div className="dossier-row">
+          <span>Ràng buộc</span>
+          <strong>Tiền nhà / Năng lượng / Uy tín</strong>
+        </div>
+        <div className="signal-preview" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+      </aside>
+    </main>
   );
 }
 
-function GameRoot() {
+function endingCopy(state: CampaignState): { title: string; text: string } {
+  if (state.mode === "demo") {
+    return {
+      title: "Demo hoàn tất",
+      text: "Bạn đã biến một tín hiệu rời rạc thành quyết định có căn cứ.",
+    };
+  }
+  if (state.endingsUnlocked.includes("syndicate_bust")) {
+    return {
+      title: "Mạng lưới bị bóc gỡ",
+      text: "Các node cuối cùng đã khép thành một hồ sơ đủ mạnh để chuyển giao CÒ XÁM.",
+    };
+  }
+  if (state.endingsUnlocked.includes("homeless")) {
+    return {
+      title: "Một chiến thắng quá đắt",
+      text: "Ca trực kết thúc, nhưng tiền nhà chưa được thanh toán. Công việc và đời sống không thể tách rời.",
+    };
+  }
+  if (state.endingsUnlocked.includes("burnout")) {
+    return {
+      title: "Tín hiệu tắt vì kiệt sức",
+      text: "Không một điều tra viên nào có thể bảo vệ người khác nếu bản thân không còn sức tiếp tục.",
+    };
+  }
+  return {
+    title: "Tín hiệu đã mất",
+    text: "CÒ XÁM rút khỏi hạ tầng trước khi chuỗi bằng chứng đủ chặt. Một số bài học vẫn còn được giữ lại.",
+  };
+}
+
+function DebriefScreen({ state }: { state: CampaignState }) {
+  const ending = endingCopy(state);
+  const resolvedCases = Object.values(state.cases).filter((caseFile) => caseFile.verdict);
+
+  return (
+    <main className="debrief-screen">
+      <header className="debrief-hero">
+        <div className="eyebrow">BÁO CÁO SAU CA / {state.mode === "demo" ? "MÔ PHỎNG" : "CHIẾN DỊCH"}</div>
+        <h1>{ending.title}</h1>
+        <p>{ending.text}</p>
+        <div className="debrief-metrics">
+          <div><span>Uy tín</span><strong>{state.agencyTrust}%</strong></div>
+          <div><span>Nhiệt mạng</span><strong>{state.networkHeat}%</strong></div>
+          <div><span>Bằng chứng</span><strong>{state.evidence.length}</strong></div>
+          <div><span>Tín dụng</span><strong>{state.credits} CR</strong></div>
+        </div>
+      </header>
+
+      <section className="debrief-ledger">
+        <div className="section-heading">
+          <span>01</span>
+          <h2>Dòng quyết định</h2>
+        </div>
+        {resolvedCases.length === 0 ? (
+          <p className="empty-copy">Không có hồ sơ nào được xử lý trong lượt này.</p>
+        ) : (
+          <div className="debrief-case-list">
+            {resolvedCases.map((caseFile) => {
+              const scenario = SCENARIOS[caseFile.id];
+              return (
+                <article key={caseFile.id} className="debrief-case">
+                  <div>
+                    <span className="case-code">{caseFile.id}</span>
+                    <h3>{caseFile.title}</h3>
+                    <p>{scenario?.learningObjective}</p>
+                  </div>
+                  <div className={`verdict verdict-${caseFile.status}`}>
+                    {caseFile.verdict === "ignored" ? "BỎ QUA" : caseFile.verdict?.toUpperCase()}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {state.dailyReports.length > 0 && (
+        <section className="debrief-ledger">
+          <div className="section-heading">
+            <span>02</span>
+            <h2>Nhật ký ba đêm</h2>
+          </div>
+          <div className="report-grid">
+            {state.dailyReports.map((report) => (
+              <article key={report.day} className="report-card">
+                <span>Đêm {report.day}</span>
+                <strong>{report.victimsProtected} người được bảo vệ</strong>
+                <p>{report.summary}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <Link className="primary-cta debrief-return" to="/">
+        Trở về đầu ca
+      </Link>
+    </main>
+  );
+}
+
+export function GameRoot() {
   const [state, dispatch] = useReducer(campaignReducer, INITIAL_STATE);
-  
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    dispatch({ type: 'START_CAMPAIGN', payload: { mode: params.get('mode') === 'demo' ? 'demo' : 'solo' } });
+    dispatch({
+      type: "START_CAMPAIGN",
+      payload: { mode: params.get("mode") === "demo" ? "demo" : "solo" },
+    });
   }, []);
 
-  // Time loop
   useEffect(() => {
-    let interval: any;
-    if (state.status === 'playing' && state.speed !== undefined && state.speed > 0) {
-      interval = setInterval(() => {
-        dispatch({ type: 'TICK', payload: { minutes: 1 } });
-      }, 1000 / state.speed);
-    }
-    return () => clearInterval(interval);
-  }, [state.status, state.speed]);
-  
-  // Pause on blur
+    if (state.status !== "playing" || state.phase !== "shift" || state.speed === 0) return;
+    const interval = window.setInterval(() => {
+      dispatch({ type: "TICK", payload: { minutes: 1 } });
+    }, 1000 / state.speed);
+    return () => window.clearInterval(interval);
+  }, [state.phase, state.speed, state.status]);
+
   useEffect(() => {
-    const handleBlur = () => {
-      if (state.status === 'playing' && state.speed !== undefined && state.speed > 0) {
-        dispatch({ type: 'SET_SPEED', payload: { speed: 0 } });
+    const pauseOnBlur = () => {
+      if (state.status === "playing" && state.phase === "shift" && state.speed > 0) {
+        dispatch({ type: "SET_SPEED", payload: { speed: 0 } });
       }
     };
-    window.addEventListener('blur', handleBlur);
-    return () => window.removeEventListener('blur', handleBlur);
-  }, [state.status, state.speed]);
+    window.addEventListener("blur", pauseOnBlur);
+    return () => window.removeEventListener("blur", pauseOnBlur);
+  }, [state.phase, state.speed, state.status]);
 
-  
-  if (state.status === 'debrief') {
-    return (
-      <div className="min-h-screen bg-[#071018] text-white flex flex-col items-center p-8 overflow-y-auto">
-        <h1 className="text-4xl font-bold mb-4 font-serif text-[#45D6BF]">BÁO CÁO MẮT LƯỚI</h1>
-        
-        <div className="w-full max-w-2xl bg-[#11171C] border border-[#2A363D] p-6 rounded-xl mb-8 font-mono">
-          <h2 className="text-xl mb-4 border-b border-[#2A363D] pb-2 text-[#F2B35D]">X-RAY: KẾT QUẢ CÁC VỤ ÁN</h2>
-          {Object.values(state.cases).length === 0 ? (
-             <p className="text-[#86949B]">Không có hồ sơ nào được ghi nhận.</p>
-          ) : Object.values(state.cases).map(c => (
-             <div key={c.id} className="mb-4 bg-[#172127] p-4 rounded">
-                <div className="flex justify-between mb-2">
-                   <strong className="text-white">{c.title}</strong>
-                   <span className={`text-xs px-2 py-1 rounded font-bold ${c.verdict === 'warned' ? 'bg-[#45D6BF] text-[#080B0E]' : c.verdict === 'frozen' ? 'bg-[#F2B35D] text-[#080B0E]' : c.verdict === 'banned' ? 'bg-[#FF5A5F] text-[#080B0E]' : 'bg-[#2A363D] text-[#86949B]'}`}>
-                     {c.verdict ? c.verdict.toUpperCase() : 'CHƯA XỬ LÝ'}
-                   </span>
-                </div>
-                <div className="text-sm text-[#86949B]">
-                   Bằng chứng thu thập: {c.evidenceIds.length} <br/>
-                   {c.verdict ? 'Nạn nhân được bảo vệ hoặc tài khoản bị khóa kịp thời.' : 'Kẻ gian đã tẩu thoát do thiếu sự can thiệp.'}
-                </div>
-             </div>
-          ))}
-        </div>
-
-        <div className="text-gray-400 mb-8 max-w-lg text-center font-serif text-xl">
-          {state.endingsUnlocked.includes('e_nguoi_tot_khong_nha') && <div className="mb-2 text-[#FF5A5F]">Bạn đã bị đuổi khỏi căn hộ vì nợ tiền nhà.</div>}
-          {state.endingsUnlocked.includes('e_kiet_suc') && <div className="mb-2 text-[#FF5A5F]">Bạn đã sụp đổ vì kiệt sức. Sức khỏe là vốn quý nhất.</div>}
-          {!state.endingsUnlocked.length && "Ca trực kết thúc an toàn. Chúc ngủ ngon."}
-        </div>
-        
-        <Link to="/" onClick={() => window.location.href = '/'} className="px-8 py-4 bg-[#45D6BF] text-[#080B0E] font-bold rounded hover:bg-white transition-colors tracking-widest uppercase text-xs">TRỞ VỀ MENU</Link>
-      </div>
-    );
-  }
-
-  if (state.location === 'apartment') {
-    return <Apartment state={state} dispatch={dispatch} />;
-  }
+  if (state.status === "debrief") return <DebriefScreen state={state} />;
+  if (state.location === "apartment") return <Apartment state={state} dispatch={dispatch} />;
   return <Workstation state={state} dispatch={dispatch} />;
 }
 
 export default function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
         <Route path="/" element={<IntroScreen />} />
         <Route path="/game" element={<GameRoot />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }

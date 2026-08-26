@@ -1,88 +1,161 @@
-import React, { useState } from 'react';
-import { CampaignState, GameAction } from '../../game/state/types';
-import { Link2 } from 'lucide-react';
+import { useMemo, useState } from "react";
+import { Link2, Network, Unlink } from "lucide-react";
+import type { CampaignState, EvidenceToken, GameAction } from "../../game/state/types";
 
-export function GraphView({ state, dispatch }: { state: CampaignState, dispatch: React.Dispatch<GameAction> }) {
-  const [selected, setSelected] = useState<string[]>([]);
-  
-  const toggleSelect = (id: string) => {
-    if (selected.includes(id)) setSelected(selected.filter(x => x !== id));
-    else if (selected.length < 2) setSelected([...selected, id]);
+type GraphViewProps = {
+  state: CampaignState;
+  dispatch: React.Dispatch<GameAction>;
+};
+
+type Point = { x: number; y: number };
+
+function nodePositions(total: number): Point[] {
+  if (total === 0) return [];
+  return Array.from({ length: total }, (_, index) => {
+    if (total === 1) return { x: 50, y: 50 };
+    const ring = index < 8 ? 0 : 1;
+    const ringIndex = ring === 0 ? index : index - 8;
+    const ringTotal = ring === 0 ? Math.min(total, 8) : Math.max(1, total - 8);
+    const radiusX = ring === 0 ? 36 : 22;
+    const radiusY = ring === 0 ? 34 : 20;
+    const angle = (Math.PI * 2 * ringIndex) / ringTotal - Math.PI / 2;
+    return { x: 50 + Math.cos(angle) * radiusX, y: 50 + Math.sin(angle) * radiusY };
+  });
+}
+
+function related(source: EvidenceToken, target: EvidenceToken): boolean {
+  return source.relatedEntityIds.includes(target.id) || target.relatedEntityIds.includes(source.id);
+}
+
+export function GraphView({ state, dispatch }: GraphViewProps) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const positions = useMemo(() => nodePositions(state.evidence.length), [state.evidence.length]);
+  const evidenceIndex = useMemo(
+    () => new Map(state.evidence.map((item, index) => [item.id, index])),
+    [state.evidence],
+  );
+  const selectedEvidence = selectedIds
+    .map((id) => state.evidence.find((item) => item.id === id))
+    .filter((item): item is EvidenceToken => Boolean(item));
+  const canLink =
+    selectedEvidence.length === 2 &&
+    Boolean(selectedEvidence[0]?.lookedUp) &&
+    Boolean(selectedEvidence[1]?.lookedUp) &&
+    related(selectedEvidence[0] as EvidenceToken, selectedEvidence[1] as EvidenceToken);
+
+  const toggle = (id: string) => {
+    setSelectedIds((current) => {
+      if (current.includes(id)) return current.filter((item) => item !== id);
+      if (current.length >= 2) return [current[1] as string, id];
+      return [...current, id];
+    });
   };
-  
-  const handleLink = () => {
-    if (selected.length === 2) {
-       dispatch({ 
-         type: 'LINK_EVIDENCE', 
-         payload: { 
-           sourceId: selected[0] as string, 
-           targetId: selected[1] as string, 
-           label: 'Liên quan' 
-         } 
-       });
-       setSelected([]);
-    }
+
+  const createLink = () => {
+    const [sourceId, targetId] = selectedIds;
+    if (!sourceId || !targetId || !canLink) return;
+    dispatch({ type: "LINK_EVIDENCE", payload: { sourceId, targetId } });
+    setSelectedIds([]);
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#11171C] border border-[#2A363D] rounded-xl overflow-hidden relative">
-      <div className="p-4 border-b border-[#2A363D] bg-[#172127] font-bold text-sm text-[#F2B35D] flex items-center gap-2 z-10 relative">
-         <Link2 size={16} /> BIỂU ĐỒ LIÊN KẾT BẰNG CHỨNG
-      </div>
-      
-      {/* Tools */}
-      <div className="absolute top-16 left-4 z-10 bg-black/80 border border-[#2A363D] rounded p-2 text-xs flex flex-col gap-2">
-         <div className="text-[#86949B]">Chọn 2 node để tạo liên kết</div>
-         <button 
-           onClick={handleLink}
-           disabled={selected.length !== 2}
-           className="w-full py-2 bg-[#45D6BF] text-[#080B0E] font-bold rounded disabled:opacity-30 disabled:bg-[#2A363D] disabled:text-[#86949B]"
-         >
-           TẠO LIÊN KẾT
-         </button>
-      </div>
+    <div className="graph-view">
+      <header className="tool-header">
+        <div>
+          <span>CÔNG CỤ / ENTITY-GRAPH</span>
+          <h2>Lưới liên kết CÒ XÁM</h2>
+          <p>Chỉ node đã tra OSINT và có quan hệ trong ground truth mới được nối.</p>
+        </div>
+        <div className="graph-score"><Network size={17} /> {state.graphEdges.length} liên kết</div>
+      </header>
 
-      <div className="flex-1 relative bg-[radial-gradient(#2A363D_1px,transparent_1px)] [background-size:20px_20px] bg-black/50 overflow-hidden">
-         <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            {state.graphEdges.map(edge => {
-               // Fake coordinates based on ID hash for demo purposes
-               const sIdx = state.evidence.findIndex(e => e.id === edge.sourceId);
-               const tIdx = state.evidence.findIndex(e => e.id === edge.targetId);
-               if (sIdx < 0 || tIdx < 0) return null;
-               
-               const x1 = 150 + (sIdx % 3) * 150;
-               const y1 = 150 + Math.floor(sIdx / 3) * 100;
-               const x2 = 150 + (tIdx % 3) * 150;
-               const y2 = 150 + Math.floor(tIdx / 3) * 100;
-               
-               return (
-                 <line key={edge.id} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#45D6BF" strokeWidth="2" strokeDasharray="4 4" />
-               );
+      <div className="graph-workspace">
+        <section className="graph-canvas" aria-label="Đồ thị bằng chứng">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            {state.graphEdges.map((edge) => {
+              const sourceIndex = evidenceIndex.get(edge.sourceId);
+              const targetIndex = evidenceIndex.get(edge.targetId);
+              if (sourceIndex === undefined || targetIndex === undefined) return null;
+              const source = positions[sourceIndex];
+              const target = positions[targetIndex];
+              if (!source || !target) return null;
+              return (
+                <line
+                  key={edge.id}
+                  x1={source.x}
+                  y1={source.y}
+                  x2={target.x}
+                  y2={target.y}
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
             })}
-         </svg>
-         
-         {state.evidence.map((e, i) => {
-            const x = 150 + (i % 3) * 150;
-            const y = 150 + Math.floor(i / 3) * 100;
-            const isSelected = selected.includes(e.id);
-            
+          </svg>
+
+          {state.evidence.map((item, index) => {
+            const point = positions[index];
+            if (!point) return null;
+            const selected = selectedIds.includes(item.id);
             return (
-              <button 
-                key={e.id}
-                onClick={() => toggleSelect(e.id)}
-                className={`absolute w-24 h-24 -ml-12 -mt-12 rounded-full border-2 flex items-center justify-center text-center p-2 text-[10px] break-words transition-all duration-200 ${isSelected ? 'border-[#45D6BF] bg-[#45D6BF]/20 text-white scale-110 shadow-[0_0_15px_rgba(69,214,191,0.5)] z-20' : 'border-[#F2B35D] bg-[#11171C] text-[#F2B35D] hover:border-[#45D6BF] hover:text-white z-10'}`}
-                style={{ left: x, top: y }}
+              <button
+                key={item.id}
+                className={`graph-node ${selected ? "selected" : ""} ${item.lookedUp ? "unlocked" : "locked"}`}
+                style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                onClick={() => toggle(item.id)}
+                aria-label={`Chọn node ${item.label}`}
               >
-                {e.label}
+                <span>{item.entityType}</span>
+                <strong>{item.label}</strong>
+                <small>{item.lookedUp ? "ĐÃ TRA" : "KHÓA OSINT"}</small>
               </button>
             );
-         })}
-         
-         {state.evidence.length === 0 && (
-           <div className="absolute inset-0 flex items-center justify-center text-[#86949B]">
-              Chưa có dữ liệu để vẽ biểu đồ.
-           </div>
-         )}
+          })}
+
+          {state.evidence.length === 0 && (
+            <div className="tool-empty-state graph-empty">
+              <Unlink size={30} />
+              <p>Chưa có node. Niêm phong bằng chứng từ tín hiệu trước.</p>
+            </div>
+          )}
+        </section>
+
+        <aside className="link-console">
+          <span>LIÊN KẾT THỦ CÔNG</span>
+          <div className="selected-node-list">
+            {[0, 1].map((slot) => {
+              const item = selectedEvidence[slot];
+              return (
+                <div key={slot} className={item ? "filled" : ""}>
+                  <small>NODE {slot + 1}</small>
+                  <strong>{item?.label ?? "Chưa chọn"}</strong>
+                </div>
+              );
+            })}
+          </div>
+          <p className={canLink ? "link-valid" : "link-invalid"}>
+            {selectedEvidence.length < 2
+              ? "Chọn hai node."
+              : !selectedEvidence.every((item) => item.lookedUp)
+                ? "Tra OSINT cả hai node trước."
+                : canLink
+                  ? "Quan hệ kỹ thuật hợp lệ."
+                  : "Không có quan hệ ground truth."}
+          </p>
+          <button disabled={!canLink} onClick={createLink}>
+            <Link2 size={16} /> Xác minh liên kết
+          </button>
+
+          <div className="edge-ledger">
+            <span>ĐÃ XÁC MINH</span>
+            {state.graphEdges.length === 0 ? (
+              <p>Chưa có edge.</p>
+            ) : (
+              state.graphEdges.map((edge) => (
+                <p key={edge.id}>{edge.sourceId} ↔ {edge.targetId}</p>
+              ))
+            )}
+          </div>
+        </aside>
       </div>
     </div>
   );

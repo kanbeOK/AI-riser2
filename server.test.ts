@@ -3,10 +3,10 @@ import request from 'supertest';
 import { createApp } from './server.js';
 
 describe('Server API Endpoints', () => {
-  let app: any;
+  let app: ReturnType<typeof createApp>;
   
   beforeAll(() => {
-    app = createApp();
+    app = createApp({ geminiApiKey: null });
   });
 
   it('1. /api/health returns ok', async () => {
@@ -42,13 +42,38 @@ describe('Server API Endpoints', () => {
       userMessage: 'hello'
     });
     expect(res.status).toBe(200);
-    expect(['gemini', 'deterministic_fallback']).toContain(res.body.source);
+    expect(res.body.source).toBe('deterministic_fallback');
     expect(res.body.message).toBeDefined();
     expect(res.body.tactic).toBeDefined();
     expect(res.body.pressureDelta).toBeDefined();
+    expect(Array.isArray(res.body.clues)).toBe(true);
   });
 
-  it('6. 404 for unknown API endpoints', async () => {
+  it('6. rejects oversized chat history instead of forwarding it', async () => {
+    const history = Array.from({ length: 9 }, () => ({
+      role: 'user' as const,
+      parts: [{ text: 'synthetic message' }]
+    }));
+    const res = await request(app).post('/api/scenarios/turn').send({
+      scenarioId: 'c1_qr_delivery',
+      history,
+      userMessage: 'hello'
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('7. keeps the deterministic legitimate scenario non-coercive', async () => {
+    const res = await request(app).post('/api/scenarios/turn').send({
+      scenarioId: 'c2_legit_shipper',
+      userMessage: 'Tôi kiểm tra ở đâu?'
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.source).toBe('deterministic_fallback');
+    expect(res.body.tactic).toBe('Xác minh minh bạch');
+    expect(res.body.pressureDelta).toBeLessThan(0);
+  });
+
+  it('8. 404 for unknown API endpoints', async () => {
     const res = await request(app).get('/api/unknown');
     expect(res.status).toBe(404);
   });

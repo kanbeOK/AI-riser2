@@ -1,68 +1,95 @@
-import React, { useState } from 'react';
-import { CampaignState, GameAction } from '../../game/state/types';
-import { Search } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { Database, RadioTower, SearchCheck, WifiOff } from "lucide-react";
+import type { CampaignState, GameAction } from "../../game/state/types";
 
-export function OsintView({ state, dispatch }: { state: CampaignState, dispatch: React.Dispatch<GameAction> }) {
-  const [query, setQuery] = useState("");
-  const [result, setResult] = useState<string | null>(null);
-  
-  const handleSearch = () => {
-    if (!query) return;
-    
-    // Exact deterministic lookup in evidence
-    const matchingEvidence = state.evidence.find(e => e.value.toLowerCase().includes(query.toLowerCase()) || e.label.toLowerCase().includes(query.toLowerCase()));
-    
-    if (matchingEvidence) {
-      if (matchingEvidence.entityType === 'phone') {
-        setResult(`Phân tích [${matchingEvidence.value}]: Cảnh báo! Số điện thoại này nằm trong danh sách đen, liên quan đến 2 vụ lừa đảo mạo danh ngân hàng trước đây.`);
-      } else if (matchingEvidence.entityType === 'domain') {
-        setResult(`Phân tích [${matchingEvidence.value}]: Tên miền mới đăng ký cách đây 3 ngày. IP máy chủ đặt tại nước ngoài (không khớp với vị trí doanh nghiệp thật).`);
-      } else if (matchingEvidence.entityType === 'account') {
-        setResult(`Phân tích [${matchingEvidence.value}]: Tài khoản ảo. Có lịch sử nhận và chuyển tiền liên tục đi nhiều tài khoản phụ trong thời gian ngắn.`);
-      } else {
-        setResult(`Phân tích [${matchingEvidence.value}]: Thực thể này (${matchingEvidence.entityType}) có dấu hiệu dị thường trên hệ thống mạng.`);
-      }
-    } else {
-      setResult(`Không tìm thấy dữ liệu tình báo nào khớp với "${query}". Hãy chắc chắn rằng bạn đã trích xuất bằng chứng này từ tín hiệu.`);
-    }
-  };
-  
+type OsintViewProps = {
+  state: CampaignState;
+  dispatch: React.Dispatch<GameAction>;
+};
+
+export function OsintView({ state, dispatch }: OsintViewProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(state.evidence[0]?.id ?? null);
+  const selected = state.evidence.find((item) => item.id === selectedId) ?? null;
+  const internetAvailable = state.internetPaidThroughDay >= state.day;
+
+  useEffect(() => {
+    if (!selectedId && state.evidence[0]) setSelectedId(state.evidence[0].id);
+  }, [selectedId, state.evidence]);
+
   return (
-    <div className="flex flex-col h-full bg-[#11171C] border border-[#2A363D] rounded-xl overflow-hidden">
-      <div className="p-4 border-b border-[#2A363D] bg-[#172127] font-bold text-sm text-[#F2B35D] flex items-center gap-2">
-         <Search size={16} /> TRUY VẾT DỮ LIỆU (OSINT)
-      </div>
-      <div className="p-6 flex flex-col gap-6 items-center justify-center flex-1">
-         <div className="w-full max-w-md flex flex-col gap-2">
-            <label className="text-xs text-[#86949B] font-bold">NHẬP BẰNG CHỨNG CẦN TRA CỨU:</label>
-            <div className="flex gap-2">
-               <input 
-                 className="flex-1 bg-black/50 border border-[#2A363D] rounded px-4 py-2 text-[#E9EEE9] focus:outline-none focus:border-[#45D6BF]"
-                 value={query}
-                 onChange={e => setQuery(e.target.value)}
-                 onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                 placeholder="Nhập IP, STK, Số điện thoại..."
-               />
-               <button 
-                 onClick={handleSearch}
-                 className="px-6 py-2 bg-[#45D6BF] text-[#080B0E] font-bold rounded hover:bg-[#6DA8FF] transition-colors"
-               >
-                 TRA CỨU
-               </button>
+    <div className="osint-view">
+      <header className="tool-header">
+        <div>
+          <span>CÔNG CỤ / OSINT-LOCAL</span>
+          <h2>Đối chiếu nguồn mở</h2>
+          <p>Mỗi truy vấn tốn 2 phút game. Chọn bằng chứng đã niêm phong, không nhập lại dữ liệu.</p>
+        </div>
+        <div className={`connection-state ${internetAvailable ? "online" : "offline"}`}>
+          {internetAvailable ? <RadioTower size={16} /> : <WifiOff size={16} />}
+          {internetAvailable ? "ONLINE" : "MẤT KẾT NỐI"}
+        </div>
+      </header>
+
+      <div className="osint-body">
+        <aside className="osint-source-list">
+          <span>NGUỒN ĐÃ NIÊM PHONG / {state.evidence.length}</span>
+          {state.evidence.length === 0 ? (
+            <div className="tool-empty-state compact">Quay lại tín hiệu và niêm phong ít nhất một attachment.</div>
+          ) : (
+            state.evidence.map((item) => (
+              <button
+                key={item.id}
+                className={selectedId === item.id ? "selected" : ""}
+                onClick={() => setSelectedId(item.id)}
+              >
+                <Database size={15} />
+                <div>
+                  <strong>{item.label}</strong>
+                  <small>{item.entityType} · {item.lookedUp ? "đã tra" : "chưa tra"}</small>
+                </div>
+              </button>
+            ))
+          )}
+        </aside>
+
+        <section className="osint-result-pane">
+          {!selected ? (
+            <div className="tool-empty-state">
+              <SearchCheck size={28} />
+              <p>Chọn một bằng chứng để bắt đầu.</p>
             </div>
-            <p className="text-[10px] text-[#86949B]">Mẹo: Nhập chính xác giá trị bằng chứng đã thu thập ở thẻ bên phải.</p>
-         </div>
-         
-         <div className="w-full max-w-md h-48 bg-black/30 border border-dashed border-[#2A363D] rounded-lg p-4 flex flex-col items-center justify-center text-[#86949B] text-sm text-center">
-            {result ? (
-               <div className="text-left w-full h-full text-[#E9EEE9] font-mono leading-relaxed overflow-auto">
-                 <span className="text-[#F2B35D] font-bold">KẾT QUẢ TRẢ VỀ:</span><br/><br/>
-                 {result}
-               </div>
-            ) : (
-               <span>Nhập thông tin để bắt đầu quét.</span>
-            )}
-         </div>
+          ) : (
+            <>
+              <div className="query-specimen">
+                <span>{selected.entityType}</span>
+                <h3>{selected.label}</h3>
+                <code>{selected.value}</code>
+              </div>
+
+              {selected.lookedUp ? (
+                <div className="lookup-result">
+                  <span>KẾT QUẢ ĐÃ KÝ / ML-OSINT</span>
+                  <p>{selected.lookupResult}</p>
+                  <div className="education-line">{selected.educationalNote}</div>
+                  {selected.relatedEntityIds.length > 0 && (
+                    <small>Gợi ý quan hệ: {selected.relatedEntityIds.length} node kỹ thuật.</small>
+                  )}
+                </div>
+              ) : (
+                <div className="lookup-pending">
+                  <p>Dữ liệu chưa được đối chiếu. Chạy truy vấn để mở khóa kết quả và khả năng tạo liên kết.</p>
+                  <button
+                    disabled={!internetAvailable || !selected.lookupResult}
+                    onClick={() => dispatch({ type: "RUN_OSINT", payload: { evidenceId: selected.id } })}
+                    aria-label={`Tra cứu ${selected.label}`}
+                  >
+                    <SearchCheck size={16} /> Chạy đối chiếu
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
       </div>
     </div>
   );

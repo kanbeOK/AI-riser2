@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
@@ -9,7 +10,18 @@ import { SCENARIOS } from './src/game/content/scenarios.js';
 const PORT = Number(process.env.PORT || 8080);
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
-export function createApp() {
+type CreateAppOptions = {
+  geminiApiKey?: string | null;
+};
+
+const TurnResponseSchema = z.object({
+  message: z.string().trim().min(1).max(360),
+  tactic: z.string().trim().min(1).max(80),
+  pressureDelta: z.number().int().min(-20).max(20),
+  clueKey: z.string().optional(),
+});
+
+export function createApp(options: CreateAppOptions = {}) {
   const app = express();
   
   app.use(express.json({ limit: '1mb' }));
@@ -20,15 +32,37 @@ export function createApp() {
     actionId: z.string().optional(),
     history: z.array(z.object({
       role: z.enum(['user', 'model']),
-      parts: z.array(z.object({ text: z.string() }))
+      parts: z.array(z.object({ text: z.string().max(500) })).min(1).max(1)
     })).max(8).optional(),
     userMessage: z.string().max(300).optional()
   });
 
   function getGemini() {
-    const key = process.env.GEMINI_API_KEY;
+    const key = options.geminiApiKey === undefined
+      ? process.env.GEMINI_API_KEY
+      : options.geminiApiKey;
     if (!key) return null;
     return new GoogleGenAI({ apiKey: key });
+  }
+
+  function normalizeHistory(history: z.infer<typeof TurnRequestSchema>["history"]) {
+    if (!history) return [];
+    const merged: NonNullable<z.infer<typeof TurnRequestSchema>["history"]> = [];
+
+    history.forEach((turn) => {
+      const text = turn.parts[0]?.text.trim();
+      if (!text) return;
+      const previous = merged.at(-1);
+      if (previous?.role === turn.role) {
+        previous.parts[0] = { text: `${previous.parts[0]?.text ?? ""}\n${text}`.slice(0, 500) };
+      } else {
+        merged.push({ role: turn.role, parts: [{ text }] });
+      }
+    });
+
+    while (merged[0]?.role === "model") merged.shift();
+    if (merged.at(-1)?.role === "user") merged.pop();
+    return merged.slice(-8);
   }
 
   app.post('/api/scenarios/turn', async (req, res) => {
@@ -38,7 +72,7 @@ export function createApp() {
         return res.status(400).json({ error: { code: 400, message: "Invalid request payload", details: parsed.error.issues, retryable: false } });
       }
 
-      const { scenarioId, actionId, history, userMessage } = parsed.data;
+      const { scenarioId, history, userMessage } = parsed.data;
       
       const scenario = SCENARIOS[scenarioId];
       if (!scenario) {
@@ -52,24 +86,28 @@ export function createApp() {
         const fallbackBeat = scenario.beats[0];
         return res.json({
           message: fallbackBeat ? fallbackBeat.text : "Tôi đang bận, xin vui lòng làm theo yêu cầu nhanh lên!",
-          tactic: scenario.tactics[0] || "Gây áp lực",
-          pressureDelta: 10,
+          tactic: scenario.tactics[0] || "Xác minh minh bạch",
+          pressureDelta: scenario.isScam ? 10 : -6,
           clues: fallbackBeat ? fallbackBeat.clues : [],
           source: 'deterministic_fallback'
         });
       }
 
       const allowedClues = Object.keys(scenario.evidenceBase);
+      const roleInstruction = scenario.isScam
+        ? `Bạn đang đóng vai nguồn lừa đảo hư cấu trong một trò chơi mô phỏng giáo dục.
+          Mục tiêu trong vai: tìm cách tạo lòng tin hoặc gây áp lực, nhưng không bao giờ cung cấp hướng dẫn phạm pháp có thể áp dụng ngoài đời.`
+        : `Bạn đang đóng vai một nguồn giao hàng hợp pháp hư cấu trong trò chơi mô phỏng giáo dục.
+          Mục tiêu trong vai: trả lời minh bạch, khuyến khích người dùng kiểm tra qua ứng dụng chính thức và không tạo áp lực.`;
 
       const chat = aiClient.chats.create({
         model: GEMINI_MODEL,
+        history: normalizeHistory(history),
         config: {
-          systemInstruction: `Bạn đang đóng vai kẻ lừa đảo trong một trò chơi mô phỏng giáo dục.
+          systemInstruction: `${roleInstruction}
           Kịch bản: ${scenario.title}
           Chiến thuật: ${scenario.tactics.join(", ")}
-          Mục tiêu: Đạt được lòng tin hoặc ép buộc nạn nhân.
-          Hãy đóng vai thật tự nhiên, không bao giờ thừa nhận mình là kẻ lừa đảo.
-          Chỉ trả lời ngắn gọn, dưới 2 câu. Không sử dụng các thông tin thực tế (tên người thật, sđt thật, link thật).
+          Hãy đóng vai tự nhiên và chỉ trả lời ngắn gọn, dưới 2 câu. Không sử dụng tên người thật, số điện thoại thật, domain thật, tài khoản thật hoặc đường dẫn có thể truy cập.
           Trả về đối tượng JSON gồm:
           - message: Lời thoại của bạn.
           - tactic: Tên chiến thuật bạn đang dùng.
@@ -91,7 +129,9 @@ export function createApp() {
 
       try {
         const response = await chat.sendMessage({ message: userMessage || "Bắt đầu" });
-        const data = JSON.parse(response.text || '{}');
+        const parsedResponse = TurnResponseSchema.safeParse(JSON.parse(response.text || '{}'));
+        if (!parsedResponse.success) throw new Error("Gemini returned an invalid turn payload");
+        const data = parsedResponse.data;
         
         let validClueKey = undefined;
         if (data.clueKey && allowedClues.includes(data.clueKey)) {
@@ -99,9 +139,9 @@ export function createApp() {
         }
 
         res.json({ 
-          message: data.message || "Tiếp tục làm theo hướng dẫn của tôi.", 
-          tactic: data.tactic || "Thuyết phục",
-          pressureDelta: Math.max(-20, Math.min(20, data.pressureDelta || 0)),
+          message: data.message,
+          tactic: data.tactic,
+          pressureDelta: data.pressureDelta,
           clues: validClueKey ? [validClueKey] : [],
           source: 'gemini' 
         });
@@ -109,9 +149,9 @@ export function createApp() {
         console.error("Gemini Error:", e);
         const fallbackBeat = scenario.beats[0];
         res.json({ 
-          message: fallbackBeat ? fallbackBeat.text : "Mạng đang chậm, nhanh tay chuyển khoản hoặc gửi thông tin đi bạn!", 
-          tactic: "Ép buộc",
-          pressureDelta: 5,
+          message: fallbackBeat ? fallbackBeat.text : "Kênh mô phỏng đang chuyển sang timeline dự phòng.",
+          tactic: scenario.tactics[0] || "Xác minh minh bạch",
+          pressureDelta: scenario.isScam ? 5 : -4,
           clues: fallbackBeat ? fallbackBeat.clues : [],
           source: 'deterministic_fallback' 
         });
