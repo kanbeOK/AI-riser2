@@ -170,7 +170,7 @@ export function Checker() {
                       <li key={i} className="text-sm border border-ink/10 p-3 bg-white/50">
                         <div className="break-all font-mono text-xs mb-2 opacity-80">{urlInfo.url}</div>
                         <div className="text-[10px] uppercase tracking-widest font-bold text-ink/60">
-                           Tình trạng: {urlInfo.status === 'not_checked' ? "Chưa kiểm tra danh tiếng đường dẫn" : urlInfo.status}
+                           Tình trạng: {urlInfo.status === 'heuristic_only' ? "Chỉ phân tích cú pháp (chưa kiểm tra Safe Browsing)" : urlInfo.status}
                         </div>
                       </li>
                     ))}

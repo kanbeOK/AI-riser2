@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tailwindcss/theme" theme(reference);
 
 @theme {
   --color-ink: #1A1A1A;

@@ -32,7 +32,7 @@ export function Impact() {
         <div className="text-[10px] tracking-[0.4em] font-sans uppercase opacity-40 mb-6">Your Progress</div>
         <h1 className="text-6xl md:text-7xl font-black font-serif tracking-tighter text-ink mb-8">Tiến Bộ Của Bạn.</h1>
         <p className="font-sans text-xs tracking-widest uppercase opacity-60 leading-relaxed max-w-2xl mx-auto">
-          Dữ liệu tiến trình được lưu trữ an toàn trên thiết bị của bạn. Hoàn thành nhiều nhiệm vụ để theo dõi sự cải thiện phản xạ bảo mật.
+          Dữ liệu tiến trình được lưu trữ trên thiết bị của bạn. Hoàn thành nhiều nhiệm vụ để theo dõi sự cải thiện.
         </p>
       </div>
 

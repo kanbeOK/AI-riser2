@@ -5,6 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import { z } from 'zod';
 import { GoogleGenAI } from '@google/genai';
 import rateLimit from 'express-rate-limit';
+import { SEED_SCENARIOS } from './src/data/scenarios.ts';
 
 const PORT = Number(process.env.PORT || 3000);
 if (isNaN(PORT) || PORT <= 0) {
@@ -47,7 +48,7 @@ app.get('/api/readyz', (req, res) => {
     capabilities: {
       geminiConfigured: !!process.env.GEMINI_API_KEY,
       firebaseConfigured: false, // We'll keep Firebase out of P0 server logic to avoid false claims
-      safeBrowsingConfigured: !!process.env.GOOGLE_SAFE_BROWSING_API_KEY
+      safeBrowsingConfigured: false
     }
   });
 });
@@ -118,8 +119,12 @@ Trả về định dạng JSON: { "message": "Nội dung tin nhắn giả lập"
         data = {};
       }
       
+      let messageOut = data.message || "Hãy làm theo hướng dẫn của tôi ngay.";
+      // Fallback manual sanitization to ensure no real URLs are leaked by the model
+      messageOut = messageOut.replace(/https?:\/\/[^\s]+/g, "[LINK MÔ PHỎNG — KHÔNG BẤM]");
+      
       res.json({
-        message: data.message || "Hãy làm theo hướng dẫn của tôi ngay.",
+        message: messageOut,
         pressureTactic: data.pressureTactic,
         coachHint: data.coachHint,
         source: 'gemini'
@@ -241,7 +246,7 @@ Trích xuất đường link nếu có. Trả về JSON theo schema.`;
     if (parsed.data.extractedBrowserUrls.length > 0) {
        urlReputation = parsed.data.extractedBrowserUrls.map(url => ({
           url,
-          status: process.env.GOOGLE_SAFE_BROWSING_API_KEY ? "not_checked_implemented_yet" : "not_checked",
+          status: "heuristic_only",
        }));
     }
 
@@ -282,7 +287,7 @@ async function startServer() {
   });
 }
 
-// Only start the server if this file is run directly (not imported in tests)
-if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('server.ts') || process.argv[1]?.endsWith('server.cjs')) {
+// Only start the server if this file is run directly
+if (process.argv[1] && (process.argv[1].endsWith('server.ts') || process.argv[1].endsWith('server.cjs'))) {
   startServer().catch(console.error);
 }

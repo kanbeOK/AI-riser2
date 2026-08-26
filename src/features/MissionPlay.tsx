@@ -144,12 +144,12 @@ export function MissionPlay() {
 
       <div className="flex-1 p-8 overflow-y-auto space-y-8 bg-[#FAF9F6] relative">
         {turns.map(turn => (
-          <div key={turn.id} className={`flex flex-col \${turn.type === 'user' ? "items-end" : "items-start"}`}>
-            <div className={`text-[10px] font-bold tracking-widest uppercase opacity-60 mb-2 \${turn.type === 'user' ? "pr-2" : "pl-2"} flex items-center gap-2`}>
+          <div key={turn.id} className={`flex flex-col ${turn.type === 'user' ? "items-end" : "items-start"}`}>
+            <div className={`text-[10px] font-bold tracking-widest uppercase opacity-60 mb-2 ${turn.type === 'user' ? "pr-2" : "pl-2"} flex items-center gap-2`}>
               {turn.type === 'user' ? "Bạn" : "Đối tượng"}
               {turn.isGeminiAdapted && <span className="bg-ink/10 text-ink px-1.5 py-0.5 text-[8px] rounded-none">AI Phản hồi</span>}
             </div>
-            <div className={`px-6 py-5 max-w-[85%] \${typography} leading-relaxed rounded-none \${
+            <div className={`px-6 py-5 max-w-[85%] ${typography} leading-relaxed rounded-none ${
               turn.type === 'user'
                  ? "bg-ink text-paper" 
                  : "bg-transparent border border-ink/10 text-ink shadow-sm"
