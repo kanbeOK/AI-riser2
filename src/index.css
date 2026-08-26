@@ -1,17 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #1A1A1A;
-  --color-paper: #FAF9F6;
+  --color-midnight: #071018;
+  --color-deep-surface: #0D1922;
+  --color-raised-surface: #132530;
+  --color-primary-text: #F4F1E8;
+  --color-muted-text: #9FB0B9;
+  --color-danger: #FF4D4F;
+  --color-warning: #FFB020;
+  --color-safe: #2DD4A3;
+  --color-signal: #58A6FF;
+  --color-paper: #E9DFC9;
+  --color-ink: #111820;
   --color-surface: #FAF9F6;
   --color-surface-alt: #E5E3DF;
-  --color-danger: #8B0000;
-  --color-warning: #B8860B;
-  --color-safe: #2F4F4F;
-  --color-learn: #E5E3DF;
-  --color-muted: color-mix(in srgb, #1A1A1A 60%, transparent);
-  --color-border: color-mix(in srgb, #1A1A1A 10%, transparent);
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  --font-serif: "Space Grotesk", ui-serif, Georgia, serif;
 }
-

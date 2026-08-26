@@ -1,38 +1,59 @@
-import { Scenario } from '../shared/types';
+export type OfficialSourceType = {
+  publisher: string;
+  title: string;
+  url: string;
+  publicationDate: string;
+  accessDate: string;
+};
 
-export const SEED_SCENARIOS: Scenario[] = [
+export type CaseDef = {
+  id: string;
+  title: string;
+  targetProfiles: string[];
+  difficulty: "easy" | "medium" | "hard";
+  estimatedDuration: string;
+  learningObjective: string;
+  initialMessage: string;
+  groundTruthTactics: string[];
+  observableCues: string[];
+  safeVerificationInstructions: string;
+  safeResponseScript: string;
+  officialSource: OfficialSourceType;
+};
+
+export const CASES: CaseDef[] = [
   {
-    id: "s1_fake_police",
-    title: "Giả danh cơ quan điều tra",
-    targetProfiles: ["family", "office"],
-    difficulty: "hard",
-    estimatedDuration: "90 - 150 giây",
-    learningObjective: "Nhận biết chiến thuật dọa nạt, yêu cầu bảo mật thông tin và nhận ra Công an không làm việc qua điện thoại/Zalo.",
-    initialMessage: "Chào anh/chị. Tôi là điều tra viên số hiệu 103, thuộc Bộ Công An. Có một tài khoản ngân hàng mang tên anh/chị đang liên quan đến đường dây buôn lậu và rửa tiền xuyên quốc gia. Yêu cầu chuyển ngay số tiền 50 triệu vào tài khoản tạm giữ của cơ quan để phục vụ điều tra, nếu không sẽ có lệnh bắt khẩn cấp. Vui lòng không tiết lộ cho ai để đảm bảo tính tuyệt mật của chuyên án.",
-    groundTruthTactics: ["authority", "fear", "isolation"],
+    id: "s1_tax_impersonation",
+    title: "Mạo danh cơ quan thuế",
+    targetProfiles: ["office", "business"],
+    difficulty: "medium",
+    estimatedDuration: "60 - 90 giây",
+    learningObjective: "Nhận biết thủ đoạn mạo danh cơ quan nhà nước yêu cầu cài đặt phần mềm độc hại.",
+    initialMessage: "Chào anh/chị, tôi là cán bộ chi cục thuế. Phần mềm eTax Mobile của anh/chị bị lỗi đồng bộ, có nguy cơ bị phạt chậm nộp. Vui lòng truy cập phanh.local/thue để tải bản cập nhật và làm theo hướng dẫn để xử lý gấp.",
+    groundTruthTactics: ["authority", "fear", "urgency"],
     observableCues: [
-      "Tự xưng Công an làm việc qua tin nhắn/điện thoại",
-      "Yêu cầu chuyển tiền vào 'tài khoản tạm giữ'",
-      "Dọa nạt bắt bớ, yêu cầu giữ bí mật tuyệt đối"
+      "Mạo danh cán bộ nhà nước liên hệ qua mạng xã hội/app chat cá nhân",
+      "Sử dụng đường dẫn giả mạo (phanh.local)",
+      "Tạo áp lực sợ bị phạt tiền"
     ],
-    safeVerificationInstructions: "Công an không bao giờ làm việc qua điện thoại hay yêu cầu chuyển tiền. Hãy cúp máy và liên hệ trực tiếp với cơ quan công an địa phương để xác minh.",
-    safeResponseScript: "Tôi không làm việc qua điện thoại. Hãy gửi giấy triệu tập chính thức về công an phường nơi tôi cư trú, tôi sẽ ra làm việc trực tiếp.",
+    safeVerificationInstructions: "Cơ quan nhà nước không bao giờ làm việc qua Zalo, Telegram cá nhân hay gửi link yêu cầu tải app ngoài luồng. Hãy tải app eTax từ chợ ứng dụng chính thức (App Store/Google Play).",
+    safeResponseScript: "Tôi sẽ trực tiếp ra cơ quan thuế hoặc kiểm tra trên ứng dụng chính thức. Cảm ơn.",
     officialSource: {
-      publisher: "Cổng Thông tin điện tử Bộ Công an",
-      title: "Cảnh báo thủ đoạn giả danh cơ quan Công an, Viện kiểm sát, Tòa án để lừa đảo chiếm đoạt tài sản",
-      url: "https://bocongan.gov.vn/",
-      publicationDate: "2023-11-20",
+      publisher: "Cổng Thông tin điện tử Chính phủ",
+      title: "Cảnh báo thủ đoạn mạo danh cơ quan thuế lừa đảo chiếm đoạt tài sản",
+      url: "https://baochinhphu.vn/",
+      publicationDate: "2023-09-21",
       accessDate: "2026-08-25"
     }
   },
   {
-    id: "s2_fake_delivery_qr",
-    title: "Đơn hàng hoàn tiền bằng QR",
-    targetProfiles: ["shopper", "student"],
+    id: "s2_fake_qr_payment",
+    title: "Mã QR độc hại",
+    targetProfiles: ["student", "shopper", "family"],
     difficulty: "easy",
-    estimatedDuration: "60 - 90 giây",
-    learningObjective: "Hiểu rằng mã QR có thể chứa lệnh chuyển tiền hoặc đường link độc hại, không quét mã lạ để nhận tiền.",
-    initialMessage: "Khách hàng có đơn hàng bị hoàn trả. Vui lòng quét mã QR đính kèm hoặc truy cập đường link zalo.me/fake-link để làm thủ tục nhận lại tiền phí bảo hiểm 50,000 VND. Nhanh chóng thực hiện trong 24h để tránh mất phí lưu kho.",
+    estimatedDuration: "45 - 60 giây",
+    learningObjective: "Tuyệt đối không quét mã lạ để nhận tiền.",
+    initialMessage: "Khách hàng có đơn hàng bị hoàn trả. Vui lòng quét mã QR đính kèm hoặc truy cập đường link example.invalid/nhan-tien để làm thủ tục nhận lại tiền phí bảo hiểm 50,000 VND. Nhanh chóng thực hiện trong 24h để tránh mất phí lưu kho.",
     groundTruthTactics: ["urgency", "greed"],
     observableCues: [
       "Yêu cầu quét QR để nhận lại tiền bảo hiểm",
@@ -104,7 +125,7 @@ export const SEED_SCENARIOS: Scenario[] = [
     difficulty: "hard",
     estimatedDuration: "120 - 150 giây",
     learningObjective: "Cảnh giác với các mối quan hệ tình cảm qua mạng và các lời mời đầu tư lãi suất cao không tưởng.",
-    initialMessage: "Chào em, dạo này em thế nào? Anh vừa chốt lời một lệnh giao dịch trên sàn X. Hệ thống đang có lỗ hổng nên anh biết chắc chắn 100% tỷ lệ thắng. Em tham gia cùng anh nhé, chỉ cần 5 triệu thôi, sau một đêm là nhân đôi tài khoản. Anh sẽ hướng dẫn em mở tài khoản trên trang web này.",
+    initialMessage: "Chào em, dạo này em thế nào? Anh vừa chốt lời một lệnh giao dịch trên sàn X. Hệ thống đang có lỗ hổng nên anh biết chắc chắn 100% tỷ lệ thắng. Em tham gia cùng anh nhé, chỉ cần 5 triệu thôi, sau một đêm là nhân đôi tài khoản. Anh sẽ hướng dẫn em mở tài khoản trên trang web safe.test này.",
     groundTruthTactics: ["sympathy", "greed"],
     observableCues: [
       "Làm quen tình cảm trên mạng sau đó rủ rê đầu tư",
@@ -128,7 +149,7 @@ export const SEED_SCENARIOS: Scenario[] = [
     difficulty: "hard",
     estimatedDuration: "90 - 120 giây",
     learningObjective: "Giữ bình tĩnh khi nghe tin người thân gặp nạn, xác minh chéo trước khi chuyển tiền.",
-    initialMessage: "Chào chị! Tôi là giáo viên chủ nhiệm của con chị. Cháu vừa bị tai nạn ở trường đang phải cấp cứu ở bệnh viện Chợ Rẫy. Tình trạng cháu đang nguy kịch cần mổ gấp. Chị chuyển khoản ngay 30 triệu vào tài khoản của bác sĩ khoa cấp cứu (STK: 1234567) để họ tiến hành phẫu thuật. Nhanh lên chị ơi, không kịp mất!",
+    initialMessage: "Chào chị! Tôi là giáo viên chủ nhiệm của con chị. Cháu vừa bị tai nạn ở trường đang phải cấp cứu ở bệnh viện Chợ Rẫy. Tình trạng cháu đang nguy kịch cần mổ gấp. Chị chuyển khoản ngay 30 triệu vào tài khoản của bác sĩ khoa cấp cứu (STK: 000-000-000) để họ tiến hành phẫu thuật. Nhanh lên chị ơi, không kịp mất!",
     groundTruthTactics: ["fear", "urgency", "sympathy"],
     observableCues: [
       "Gây hoảng loạn bằng tin đồn tai nạn cấp cứu",

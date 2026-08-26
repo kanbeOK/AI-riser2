@@ -63,9 +63,9 @@ export function Checker() {
 
   return (
     <div className="max-w-4xl mx-auto py-20 px-8 min-h-[calc(100vh-100px)]">
-      <div className="mb-16 border-b border-ink/10 pb-12">
+      <div className="mb-16 border-b border-white/10 pb-12">
         <div className="text-[10px] tracking-[0.4em] font-sans uppercase opacity-40 mb-6">Công Cụ Phân Tích</div>
-        <h1 className="text-5xl font-black font-serif tracking-tighter text-ink mb-6">Kiểm Tra Nhanh.</h1>
+        <h1 className="text-5xl font-black font-serif tracking-tighter text-primary-text mb-6">Kiểm Tra Nhanh.</h1>
         <p className="font-sans text-xs tracking-widest uppercase opacity-60 leading-relaxed max-w-xl">
           Dán tin nhắn nghi ngờ vào đây để AI phân tích.
           <br/>
@@ -73,7 +73,7 @@ export function Checker() {
         </p>
       </div>
 
-      <div className="bg-transparent border border-ink/10 p-8 mb-12 rounded-none">
+      <div className="bg-transparent border border-white/10 p-8 mb-12 rounded-none">
         <label htmlFor="checker-input" className="sr-only">Nội dung tin nhắn cần kiểm tra</label>
         <textarea
           id="checker-input"
@@ -81,17 +81,17 @@ export function Checker() {
           onChange={(e) => setText(e.target.value)}
           placeholder="Chèn văn bản cần kiểm tra tại đây..."
           disabled={isAnalyzing || result !== null}
-          className="w-full h-48 resize-none border-none focus:ring-0 p-0 text-ink placeholder-ink/30 bg-transparent font-serif text-lg leading-relaxed disabled:opacity-50"
+          className="w-full h-48 resize-none border-none focus:ring-0 p-0 text-primary-text placeholder-ink/30 bg-transparent font-serif text-lg leading-relaxed disabled:opacity-50"
         />
-        <div className="flex justify-between items-center pt-8 border-t border-ink/10 mt-4">
-          <div className="text-[10px] uppercase tracking-widest font-bold text-ink/40">
+        <div className="flex justify-between items-center pt-8 border-t border-white/10 mt-4">
+          <div className="text-[10px] uppercase tracking-widest font-bold text-primary-text/40">
             {text.length}/5000 ký tự
           </div>
           <div className="flex gap-4">
             {result && (
               <button 
                 onClick={handleReset}
-                className="bg-transparent border border-ink text-ink px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-bold flex items-center gap-2 rounded-none hover:bg-ink/5 transition-colors"
+                className="bg-transparent border border-white text-primary-text px-6 py-4 text-[10px] uppercase tracking-[0.2em] font-bold flex items-center gap-2 rounded-none hover:bg-ink/5 transition-colors"
               >
                 <RefreshCw className="w-3 h-3" /> Kiểm tra văn bản khác
               </button>
@@ -115,14 +115,14 @@ export function Checker() {
       )}
 
       {result && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 bg-[#E5E3DF]/30 border border-ink/10 p-12 rounded-none">
-          <div className="flex items-center gap-8 mb-10 border-b border-ink/10 pb-10">
-            <div className={`p-6 border ${result.riskLevel === 'high' || result.riskLevel === 'suspicious' ? 'border-danger text-danger bg-danger/5' : 'border-ink text-ink'} rounded-none`}>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 bg-[#E5E3DF]/30 border border-white/10 p-12 rounded-none">
+          <div className="flex items-center gap-8 mb-10 border-b border-white/10 pb-10">
+            <div className={`p-6 border ${result.riskLevel === 'high' || result.riskLevel === 'suspicious' ? 'border-danger text-danger bg-danger/5' : 'border-white text-primary-text'} rounded-none`}>
               <ShieldAlert className="w-8 h-8" strokeWidth={1.5} />
             </div>
             <div>
               <div className="text-[10px] tracking-[0.3em] font-sans uppercase opacity-50 mb-2">Mức độ rủi ro: {result.riskLevel}</div>
-              <h3 className="font-serif italic text-3xl text-ink leading-tight max-w-2xl">{result.verdict}</h3>
+              <h3 className="font-serif italic text-3xl text-primary-text leading-tight max-w-2xl">{result.verdict}</h3>
             </div>
           </div>
 
@@ -135,7 +135,7 @@ export function Checker() {
                   </h4>
                   <ul className="space-y-6">
                     {result.observableCues.map((cue, i) => (
-                      <li key={i} className="flex flex-col gap-2 text-sm text-ink items-start leading-relaxed border-l-2 border-danger/20 pl-4">
+                      <li key={i} className="flex flex-col gap-2 text-sm text-primary-text items-start leading-relaxed border-l-2 border-danger/20 pl-4">
                         <strong className="font-bold">{cue.label}</strong>
                         {cue.evidenceSnippet && <span className="italic opacity-70 bg-ink/5 p-2 text-xs">"{cue.evidenceSnippet}"</span>}
                         <span>{cue.explanation}</span>
@@ -147,7 +147,7 @@ export function Checker() {
 
               {result.unknowns && result.unknowns.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] tracking-[0.3em] font-sans uppercase font-bold text-ink/70 mb-4 flex items-center gap-2">
+                  <h4 className="text-[10px] tracking-[0.3em] font-sans uppercase font-bold text-primary-text/70 mb-4 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" /> Thông tin chưa rõ
                   </h4>
                   <ul className="space-y-2">
@@ -162,14 +162,14 @@ export function Checker() {
             <div className="space-y-8">
               {result.urlReputation && result.urlReputation.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] tracking-[0.3em] font-sans uppercase font-bold text-ink mb-6 flex items-center gap-2">
+                  <h4 className="text-[10px] tracking-[0.3em] font-sans uppercase font-bold text-primary-text mb-6 flex items-center gap-2">
                     <LinkIcon className="w-4 h-4" /> Đường Link Đã Quét
                   </h4>
                   <ul className="space-y-3">
                     {result.urlReputation.map((urlInfo, i) => (
-                      <li key={i} className="text-sm border border-ink/10 p-3 bg-white/50">
+                      <li key={i} className="text-sm border border-white/10 p-3 bg-white/50">
                         <div className="break-all font-mono text-xs mb-2 opacity-80">{urlInfo.url}</div>
-                        <div className="text-[10px] uppercase tracking-widest font-bold text-ink/60">
+                        <div className="text-[10px] uppercase tracking-widest font-bold text-primary-text/60">
                            Tình trạng: {urlInfo.status === 'heuristic_only' ? "Chỉ phân tích cú pháp (chưa kiểm tra Safe Browsing)" : urlInfo.status}
                         </div>
                       </li>
@@ -180,11 +180,11 @@ export function Checker() {
 
               {result.recommendedActions && result.recommendedActions.length > 0 && (
                 <div>
-                  <h4 className="text-[10px] tracking-[0.3em] font-sans uppercase font-bold text-ink mb-6">Hành động khuyến nghị</h4>
+                  <h4 className="text-[10px] tracking-[0.3em] font-sans uppercase font-bold text-primary-text mb-6">Hành động khuyến nghị</h4>
                   <ul className="space-y-4">
                     {result.recommendedActions.map((act, i) => (
-                      <li key={i} className="flex gap-4 text-sm text-ink items-start opacity-90 leading-relaxed">
-                        <span className="font-serif italic text-ink opacity-40 font-bold">0{i+1}.</span> {act}
+                      <li key={i} className="flex gap-4 text-sm text-primary-text items-start opacity-90 leading-relaxed">
+                        <span className="font-serif italic text-primary-text opacity-40 font-bold">0{i+1}.</span> {act}
                       </li>
                     ))}
                   </ul>
@@ -193,10 +193,10 @@ export function Checker() {
             </div>
           </div>
 
-          <div className="text-[10px] tracking-widest uppercase text-ink/40 font-sans mt-12 border-t border-ink/10 pt-8 flex flex-col gap-2">
+          <div className="text-[10px] tracking-widest uppercase text-primary-text/40 font-sans mt-12 border-t border-white/10 pt-8 flex flex-col gap-2">
             <div>Độ tin cậy: {result.confidenceBand}</div>
             <div>Nguồn phân tích: {result.analysisSource}</div>
-            <div className="mt-2 text-ink/60">Khuyến cáo: {result.disclaimer}</div>
+            <div className="mt-2 text-primary-text/60">Khuyến cáo: {result.disclaimer}</div>
           </div>
         </div>
       )}
