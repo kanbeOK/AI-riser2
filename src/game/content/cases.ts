@@ -1,169 +1,309 @@
-export type OfficialSourceType = {
-  publisher: string;
-  title: string;
-  url: string;
-  publicationDate: string;
-  accessDate: string;
-};
+import { GameCase, GameScene } from "../schema";
 
-export type CaseDef = {
-  id: string;
-  title: string;
-  targetProfiles: string[];
-  difficulty: "easy" | "medium" | "hard";
-  estimatedDuration: string;
-  learningObjective: string;
-  initialMessage: string;
-  groundTruthTactics: string[];
-  observableCues: string[];
-  safeVerificationInstructions: string;
-  safeResponseScript: string;
-  officialSource: OfficialSourceType;
-};
-
-export const CASES: CaseDef[] = [
-  {
-    id: "s1_tax_impersonation",
-    title: "Mạo danh cơ quan thuế",
-    targetProfiles: ["office", "business"],
-    difficulty: "medium",
-    estimatedDuration: "60 - 90 giây",
-    learningObjective: "Nhận biết thủ đoạn mạo danh cơ quan nhà nước yêu cầu cài đặt phần mềm độc hại.",
-    initialMessage: "Chào anh/chị, tôi là cán bộ chi cục thuế. Phần mềm eTax Mobile của anh/chị bị lỗi đồng bộ, có nguy cơ bị phạt chậm nộp. Vui lòng truy cập phanh.local/thue để tải bản cập nhật và làm theo hướng dẫn để xử lý gấp.",
-    groundTruthTactics: ["authority", "fear", "urgency"],
-    observableCues: [
-      "Mạo danh cán bộ nhà nước liên hệ qua mạng xã hội/app chat cá nhân",
-      "Sử dụng đường dẫn giả mạo (phanh.local)",
-      "Tạo áp lực sợ bị phạt tiền"
-    ],
-    safeVerificationInstructions: "Cơ quan nhà nước không bao giờ làm việc qua Zalo, Telegram cá nhân hay gửi link yêu cầu tải app ngoài luồng. Hãy tải app eTax từ chợ ứng dụng chính thức (App Store/Google Play).",
-    safeResponseScript: "Tôi sẽ trực tiếp ra cơ quan thuế hoặc kiểm tra trên ứng dụng chính thức. Cảm ơn.",
-    officialSource: {
-      publisher: "Cổng Thông tin điện tử Chính phủ",
-      title: "Cảnh báo thủ đoạn mạo danh cơ quan thuế lừa đảo chiếm đoạt tài sản",
-      url: "https://baochinhphu.vn/",
-      publicationDate: "2023-09-21",
-      accessDate: "2026-08-25"
-    }
-  },
-  {
-    id: "s2_fake_qr_payment",
-    title: "Mã QR độc hại",
-    targetProfiles: ["student", "shopper", "family"],
+export const CASES: Record<string, GameCase> = {
+  "c1_qr_delivery": {
+    id: "c1_qr_delivery",
+    title: "Mã QR giao hàng",
+    startTime: "07:30",
     difficulty: "easy",
-    estimatedDuration: "45 - 60 giây",
-    learningObjective: "Tuyệt đối không quét mã lạ để nhận tiền.",
-    initialMessage: "Khách hàng có đơn hàng bị hoàn trả. Vui lòng quét mã QR đính kèm hoặc truy cập đường link example.invalid/nhan-tien để làm thủ tục nhận lại tiền phí bảo hiểm 50,000 VND. Nhanh chóng thực hiện trong 24h để tránh mất phí lưu kho.",
-    groundTruthTactics: ["urgency", "greed"],
-    observableCues: [
-      "Yêu cầu quét QR để nhận lại tiền bảo hiểm",
-      "Sử dụng số điện thoại cá nhân giả mạo tổng đài",
-      "Tạo áp lực thời gian (thực hiện trong 24h)"
-    ],
-    safeVerificationInstructions: "Mã QR có thể chứa đường link độc hoặc lệnh chuyển tiền. Hãy tự mở ứng dụng giao hàng chính thức để kiểm tra tình trạng đơn hàng thay vì quét mã lạ.",
-    safeResponseScript: "Tôi sẽ tự kiểm tra đơn hàng trên ứng dụng chính thức. Đừng gửi mã QR lạ cho tôi.",
-    officialSource: {
-      publisher: "Cục An toàn thông tin",
-      title: "Cảnh báo lừa đảo chiếm đoạt tài sản qua hình thức gửi mã QR",
-      url: "https://khonggianmang.vn/",
-      publicationDate: "2024-02-15",
+    initialSceneId: "s1_lockscreen",
+    tactics: ["greed", "urgency"],
+    source: {
+      publisher: "Công an Lai Châu",
+      title: "Cảnh giác với chiêu trò lừa đảo quét mã QR trong thanh toán online",
+      url: "https://congan.laichau.gov.vn/thu-doan-pham-toi/canh-giac-voi-chieu-tro-lua-dao-quet-ma-qr-trong-thanh-toan-online-3416.html",
+      publicationDate: "2023-01-01",
       accessDate: "2026-08-25"
+    },
+    scenes: {
+      "s1_lockscreen": {
+        id: "s1_lockscreen",
+        channel: "lockscreen",
+        title: "Màn hình khóa",
+        content: {
+          text: "Có 3 thông báo mới.",
+        },
+        clueIds: [],
+        actions: [
+          { id: "open_delivery", label: "Mở thông báo Giao Hàng", interaction: "continue", nextSceneId: "s2_chat", riskTag: "safe", effects: { timeMinutes: 1 } },
+          { id: "open_family", label: "Mở thông báo Gia Đình", interaction: "continue", nextSceneId: "s1_lockscreen", riskTag: "safe", effects: {} },
+          { id: "open_bank", label: "Mở thông báo Ngân Hàng", interaction: "continue", nextSceneId: "s1_lockscreen", riskTag: "safe", effects: {} }
+        ]
+      },
+      "s2_chat": {
+        id: "s2_chat",
+        channel: "chat",
+        title: "Giao Hàng Nhanh (Giả mạo)",
+        content: {
+          senderName: "Giao Hàng Tiết Kiệm",
+          senderAvatar: "/avatar-delivery.png",
+          text: "Khách hàng có đơn hàng bị hoàn trả. Vui lòng quét mã QR đính kèm hoặc truy cập đường link example.invalid/nhan-tien để làm thủ tục nhận lại tiền phí bảo hiểm 50,000 VND. Nhanh chóng thực hiện trong 24h để tránh mất phí lưu kho.",
+          attachment: { type: "qr", url: "/qr-fake.png", previewUrl: "example.invalid/nhan-tien" }
+        },
+        clueIds: [],
+        actions: [
+          { id: "inspect_profile", label: "Xem hồ sơ người gửi", interaction: "inspect", nextSceneId: "s3_profile", riskTag: "safe", effects: { timeMinutes: 1 }, revealsClueIds: ["clue_c1_new_account"] },
+          { id: "hold_url", label: "Kiểm tra link/QR", interaction: "hold_preview", nextSceneId: "s4_url_preview", riskTag: "safe", effects: { timeMinutes: 1 } },
+          { id: "open_app", label: "Mở App Giao Hàng chính thức", interaction: "open_app", nextSceneId: "s5_official_app", riskTag: "safe", effects: { timeMinutes: 2 } },
+          { id: "click_url", label: "Truy cập link", interaction: "continue", nextSceneId: "s6_browser_risky", riskTag: "caution", effects: { timeMinutes: 1 } },
+          { id: "block", label: "Chặn & Báo cáo", interaction: "block", nextSceneId: "s7_safe_end", riskTag: "safe", effects: { pressure: -10, timeMinutes: 1 } }
+        ]
+      },
+      "s3_profile": {
+        id: "s3_profile",
+        channel: "chat",
+        title: "Hồ sơ người gửi",
+        content: {
+          text: "Tài khoản cá nhân. Đăng ký cách đây 2 ngày. Không có dấu tích xanh xác thực doanh nghiệp."
+        },
+        clueIds: ["clue_c1_new_account"],
+        actions: [
+          { id: "save_clue", label: "Lưu bằng chứng", interaction: "save_evidence", nextSceneId: "s2_chat", riskTag: "safe", effects: {} },
+          { id: "back", label: "Quay lại", interaction: "continue", nextSceneId: "s2_chat", riskTag: "safe", effects: {} }
+        ]
+      },
+      "s4_url_preview": {
+        id: "s4_url_preview",
+        channel: "browser",
+        title: "Xem trước liên kết",
+        content: {
+          html: "<div class='text-red-500 font-bold'>CẢNH BÁO</div><div>Domain hiển thị: example.invalid</div><div>Domain thực tế: phishing.invalid</div>"
+        },
+        clueIds: ["clue_c1_domain_mismatch"],
+        actions: [
+          { id: "save_evidence", label: "Lưu bằng chứng", interaction: "save_evidence", nextSceneId: "s2_chat", riskTag: "safe", effects: {}, revealsClueIds: ["clue_c1_domain_mismatch"] },
+          { id: "close", label: "Đóng", interaction: "continue", nextSceneId: "s2_chat", riskTag: "safe", effects: {} },
+          { id: "continue_unsafe", label: "Vẫn truy cập", interaction: "continue", nextSceneId: "s6_browser_risky", riskTag: "unsafe", effects: {} }
+        ]
+      },
+      "s5_official_app": {
+        id: "s5_official_app",
+        channel: "official_app",
+        title: "App Giao Hàng",
+        content: {
+          text: "Trạng thái đơn hàng: Không có đơn nào đang chờ hoàn tiền. Hỗ trợ khách hàng: Không có yêu cầu bồi thường."
+        },
+        clueIds: ["clue_c1_no_matching_order"],
+        actions: [
+          { id: "verify_safe", label: "Đã xác minh", interaction: "continue", nextSceneId: "s2_chat", riskTag: "safe", effects: {}, revealsClueIds: ["clue_c1_no_matching_order"] },
+          { id: "report_app", label: "Báo cáo số điện thoại giả mạo", interaction: "report", nextSceneId: "s7_safe_end", riskTag: "safe", effects: { wallet: 5, pressure: -20, timeMinutes: 2 } }
+        ]
+      },
+      "s6_browser_risky": {
+        id: "s6_browser_risky",
+        channel: "browser",
+        title: "Nhận Tiền - Trình duyệt",
+        content: {
+          html: "<div class='bg-yellow-900/50 p-4 rounded text-yellow-200 text-xs mb-4'>MÔ PHỎNG AN TOÀN — KHÔNG GIAO DỊCH THẬT</div><div>Vui lòng nhập thông tin số tài khoản và mã OTP để nhận 50,000 VND hoàn tiền bảo hiểm.</div>"
+        },
+        clueIds: [],
+        actions: [
+          { id: "stop_now", label: "Dừng lại, thoát trang", interaction: "recover", nextSceneId: "s2_chat", riskTag: "recovery", effects: { identity: -10, pressure: 10, timeMinutes: 2 } },
+          { id: "submit_fake_data", label: "Nhập thông tin", interaction: "continue", nextSceneId: "s8_unsafe_end", riskTag: "unsafe", effects: { identity: -40, wallet: -30, pressure: 30, timeMinutes: 5 } }
+        ]
+      },
+      "s7_safe_end": {
+        id: "s7_safe_end",
+        channel: "system",
+        title: "Kết thúc",
+        content: { text: "Bạn đã an toàn vượt qua tình huống này." },
+        clueIds: [],
+        actions: []
+      },
+      "s8_unsafe_end": {
+        id: "s8_unsafe_end",
+        channel: "system",
+        title: "Kết thúc",
+        content: { text: "Thông tin của bạn đã bị lộ." },
+        clueIds: [],
+        actions: []
+      }
     }
   },
-  {
-    id: "s3_job_commission",
+  "c2_job_commission": {
+    id: "c2_job_commission",
     title: "Việc nhẹ lương cao",
-    targetProfiles: ["student", "office"],
+    startTime: "12:15",
     difficulty: "medium",
-    estimatedDuration: "90 - 120 giây",
-    learningObjective: "Nhận biết bẫy lừa đảo việc làm online yêu cầu nạp tiền hoặc làm nhiệm vụ chốt đơn ảo.",
-    initialMessage: "Xin chào! Công ty chúng tôi đang tuyển CTV xem video và chốt đơn online tại nhà. Chỉ cần rảnh 1-2 tiếng mỗi ngày, hoa hồng 20% mỗi đơn hàng. Thu nhập 500k - 1 triệu/ngày. Chị chỉ cần nạp 200,000 VNĐ vào tài khoản hệ thống để kích hoạt nhận nhiệm vụ đầu tiên. Làm xong rút được ngay cả gốc lẫn lãi.",
-    groundTruthTactics: ["greed", "urgency"],
-    observableCues: [
-      "Hứa hẹn việc nhẹ lương cao, thu nhập bất thường",
-      "Yêu cầu nạp tiền/đặt cọc để kích hoạt nhiệm vụ",
-      "Chốt đơn ảo, không có hợp đồng lao động"
-    ],
-    safeVerificationInstructions: "Không có công việc nào hợp pháp yêu cầu bạn phải nạp tiền cọc để làm việc. Tìm hiểu kỹ thông tin công ty qua cổng thông tin quốc gia về đăng ký doanh nghiệp.",
-    safeResponseScript: "Tôi không có nhu cầu tham gia. Bất kỳ công việc nào yêu cầu nạp tiền để nhận việc tôi đều từ chối.",
-    officialSource: {
-      publisher: "Trung tâm Giám sát an toàn không gian mạng quốc gia",
-      title: "Cảnh báo hình thức lừa đảo tuyển cộng tác viên thanh toán đơn hàng ảo",
-      url: "https://khonggianmang.vn/",
-      publicationDate: "2023-08-10",
+    initialSceneId: "s1_chat",
+    tactics: ["greed", "urgency"],
+    source: {
+      publisher: "Cổng Thông tin điện tử Bộ Công an",
+      title: "Lừa đảo chiếm đoạt tài sản trên mạng xã hội",
+      url: "https://bocongan.gov.vn/bai-viet/lua-dao-chiem-doat-tai-san-tren-mang-xa-hoi-thu-doan-khong-moi-nhung-nhieu-nguoi-van-mac-bay-d22-t31608",
+      publicationDate: "2023-01-01",
       accessDate: "2026-08-25"
+    },
+    scenes: {
+      "s1_chat": {
+        id: "s1_chat",
+        channel: "chat",
+        title: "Nhà Tuyển Dụng",
+        content: { text: "Xin chào! Công ty chúng tôi tuyển CTV chốt đơn online. Hoa hồng 20% mỗi đơn. Nạp 200k kích hoạt." },
+        clueIds: [],
+        actions: [
+          { id: "block", label: "Chặn", interaction: "block", nextSceneId: "s_end", riskTag: "safe", effects: {} },
+          { id: "accept", label: "Đồng ý nạp tiền", interaction: "continue", nextSceneId: "s_end", riskTag: "unsafe", effects: { wallet: -20 } }
+        ]
+      },
+      "s_end": {
+        id: "s_end",
+        channel: "system",
+        title: "Kết thúc",
+        content: { text: "Hoàn tất case." },
+        clueIds: [],
+        actions: []
+      }
     }
   },
-  {
-    id: "s4_support_impersonation",
-    title: "Mạo danh hỗ trợ ngân hàng",
-    targetProfiles: ["office", "family", "shopper"],
+  "c3_bank_impersonation": {
+    id: "c3_bank_impersonation",
+    title: "Mạo danh ngân hàng",
+    startTime: "15:30",
     difficulty: "medium",
-    estimatedDuration: "60 - 100 giây",
-    learningObjective: "Không cung cấp OTP, mật khẩu cho bất kỳ ai, kể cả người tự xưng là nhân viên ngân hàng.",
-    initialMessage: "Kính chào quý khách. Tôi là nhân viên CSKH từ ngân hàng. Hệ thống ghi nhận tài khoản của quý khách đang có dấu hiệu bị trừ tiền bất thường từ nước ngoài. Xin quý khách đọc ngay mã OTP gồm 6 số vừa được gửi tới điện thoại để chúng tôi đóng băng tài khoản và bảo vệ tài sản cho quý khách.",
-    groundTruthTactics: ["authority", "fear", "urgency"],
-    observableCues: [
-      "Mạo danh tổng đài gọi điện từ số cá nhân",
-      "Gây hoang mang về việc tài khoản bị trừ tiền",
-      "Yêu cầu cung cấp mã OTP"
-    ],
-    safeVerificationInstructions: "Nhân viên ngân hàng thật không bao giờ yêu cầu bạn đọc mật khẩu hoặc mã OTP. Hãy tắt máy và tự gọi lên tổng đài chính thức in mặt sau thẻ ngân hàng.",
-    safeResponseScript: "Tôi sẽ không cung cấp OTP. Tôi sẽ tự gọi lên tổng đài của ngân hàng để kiểm tra.",
-    officialSource: {
-      publisher: "Hiệp hội Ngân hàng Việt Nam",
-      title: "Khuyến cáo về các thủ đoạn lừa đảo lấy cắp thông tin tài khoản, thẻ ngân hàng",
-      url: "https://vnba.org.vn/",
-      publicationDate: "2024-01-05",
+    initialSceneId: "s1_call",
+    tactics: ["authority", "fear", "urgency"],
+    source: {
+      publisher: "Hiệp hội Ngân hàng",
+      title: "Cẩn trọng trước các chiêu trò giả danh",
+      url: "https://vnba.org.vn/vi/can-trong-truoc-cac-chieu-tro-gia-danh-nhan-vien-ngan-hang-19892.htm",
+      publicationDate: "2023-01-01",
       accessDate: "2026-08-25"
+    },
+    scenes: {
+      "s1_call": {
+        id: "s1_call",
+        channel: "call",
+        title: "Cuộc gọi đến",
+        content: { text: "Nhân viên ngân hàng thông báo tài khoản bị trừ tiền, yêu cầu đọc OTP." },
+        clueIds: [],
+        actions: [
+          { id: "hang_up", label: "Cúp máy", interaction: "block", nextSceneId: "s_end", riskTag: "safe", effects: {} },
+          { id: "give_otp", label: "Đọc OTP", interaction: "continue", nextSceneId: "s_end", riskTag: "unsafe", effects: { wallet: -50 } }
+        ]
+      },
+      "s_end": {
+        id: "s_end",
+        channel: "system",
+        title: "Kết thúc",
+        content: { text: "Hoàn tất case." },
+        clueIds: [],
+        actions: []
+      }
     }
   },
-  {
-    id: "s5_romance_investment",
-    title: "Làm quen và dụ dỗ đầu tư",
-    targetProfiles: ["office", "family"],
+  "c4_police_impersonation": {
+    id: "c4_police_impersonation",
+    title: "Cơ quan chức năng",
+    startTime: "17:40",
     difficulty: "hard",
-    estimatedDuration: "120 - 150 giây",
-    learningObjective: "Cảnh giác với các mối quan hệ tình cảm qua mạng và các lời mời đầu tư lãi suất cao không tưởng.",
-    initialMessage: "Chào em, dạo này em thế nào? Anh vừa chốt lời một lệnh giao dịch trên sàn X. Hệ thống đang có lỗ hổng nên anh biết chắc chắn 100% tỷ lệ thắng. Em tham gia cùng anh nhé, chỉ cần 5 triệu thôi, sau một đêm là nhân đôi tài khoản. Anh sẽ hướng dẫn em mở tài khoản trên trang web safe.test này.",
-    groundTruthTactics: ["sympathy", "greed"],
-    observableCues: [
-      "Làm quen tình cảm trên mạng sau đó rủ rê đầu tư",
-      "Cam kết lợi nhuận 100%, lãi cao bất thường",
-      "Sử dụng sàn giao dịch hoặc ứng dụng lạ"
-    ],
-    safeVerificationInstructions: "Không có khoản đầu tư nào lợi nhuận cao mà không có rủi ro, nhất là khi được giới thiệu bởi người quen trên mạng chưa từng gặp mặt. Hãy cảnh giác với 'bẫy tình' lừa tiền.",
-    safeResponseScript: "Cảm ơn nhưng tôi không quan tâm đến đầu tư tài chính. Đừng gửi những đường link sàn giao dịch này cho tôi nữa.",
-    officialSource: {
-      publisher: "Cổng Thông tin điện tử Bộ Công an",
-      title: "Cảnh báo tội phạm lừa đảo qua hình thức kết bạn bốn phương, dụ dỗ đầu tư tài chính",
-      url: "https://bocongan.gov.vn/",
-      publicationDate: "2023-10-12",
+    initialSceneId: "s1_call",
+    tactics: ["authority", "fear"],
+    source: {
+      publisher: "Bộ Công An",
+      title: "Kịp thời ngăn chặn thủ đoạn giả danh công an",
+      url: "https://bocongan.gov.vn/bai-viet/kip-thoi-ngan-chan-thu-doan-gia-danh-can-bo-cong-an-lua-dao-chiem-doat-tai-san-1766401188",
+      publicationDate: "2023-01-01",
       accessDate: "2026-08-25"
+    },
+    scenes: {
+      "s1_call": {
+        id: "s1_call",
+        channel: "call",
+        title: "Cuộc gọi đến",
+        content: { text: "Công an yêu cầu phối hợp điều tra." },
+        clueIds: [],
+        actions: [
+          { id: "hang_up", label: "Cúp máy", interaction: "block", nextSceneId: "s_end", riskTag: "safe", effects: {} }
+        ]
+      },
+      "s_end": {
+        id: "s_end",
+        channel: "system",
+        title: "Kết thúc",
+        content: { text: "Hoàn tất case." },
+        clueIds: [],
+        actions: []
+      }
     }
   },
-  {
-    id: "s6_kidnapping_family",
-    title: "Cấp cứu người thân / Bắt cóc",
-    targetProfiles: ["family"],
+  "c5_family_emergency": {
+    id: "c5_family_emergency",
+    title: "Người thân cấp cứu",
+    startTime: "21:20",
     difficulty: "hard",
-    estimatedDuration: "90 - 120 giây",
-    learningObjective: "Giữ bình tĩnh khi nghe tin người thân gặp nạn, xác minh chéo trước khi chuyển tiền.",
-    initialMessage: "Chào chị! Tôi là giáo viên chủ nhiệm của con chị. Cháu vừa bị tai nạn ở trường đang phải cấp cứu ở bệnh viện Chợ Rẫy. Tình trạng cháu đang nguy kịch cần mổ gấp. Chị chuyển khoản ngay 30 triệu vào tài khoản của bác sĩ khoa cấp cứu (STK: 000-000-000) để họ tiến hành phẫu thuật. Nhanh lên chị ơi, không kịp mất!",
-    groundTruthTactics: ["fear", "urgency", "sympathy"],
-    observableCues: [
-      "Gây hoảng loạn bằng tin đồn tai nạn cấp cứu",
-      "Yêu cầu chuyển tiền gấp để mổ",
-      "Cung cấp số tài khoản cá nhân thay vì tài khoản bệnh viện"
-    ],
-    safeVerificationInstructions: "Khi nhận được thông tin khẩn cấp về người thân, hãy hít thở sâu, tắt máy và lập tức gọi điện thoại xác minh trực tiếp với người thân, nhà trường hoặc bệnh viện.",
-    safeResponseScript: "Tôi cần xác minh thông tin. Cho tôi xin số điện thoại trực ban bệnh viện khoa cấp cứu để tôi gọi lại.",
-    officialSource: {
+    initialSceneId: "s1_call",
+    tactics: ["fear", "urgency", "sympathy"],
+    source: {
       publisher: "Cổng Thông tin điện tử Bộ Công an",
-      title: "Khuyến cáo người dân cảnh giác với thủ đoạn lừa đảo 'con đang cấp cứu, chuyển tiền gấp'",
-      url: "https://bocongan.gov.vn/",
-      publicationDate: "2023-03-09",
+      title: "Khi bệnh viện trường học trở thành địa bàn",
+      url: "https://cdcsnd1.bocongan.gov.vn/home/tin-tuc-su-kien/tin-trong-nuoc/khi-benh-vien-truong-hoc-tro-thanh-dia-ban-hoat-dong-cua-cac-doi-tuong-11127",
+      publicationDate: "2023-01-01",
       accessDate: "2026-08-25"
+    },
+    scenes: {
+      "s1_call": {
+        id: "s1_call",
+        channel: "call",
+        title: "Cuộc gọi đến",
+        content: { text: "Giáo viên thông báo con cấp cứu cần tiền mổ gấp." },
+        clueIds: [],
+        actions: [
+          { id: "verify", label: "Xác minh trường", interaction: "continue", nextSceneId: "s_end", riskTag: "safe", effects: {} }
+        ]
+      },
+      "s_end": {
+        id: "s_end",
+        channel: "system",
+        title: "Kết thúc",
+        content: { text: "Hoàn tất case." },
+        clueIds: [],
+        actions: []
+      }
+    }
+  },
+  "c6_romance_investment": {
+    id: "c6_romance_investment",
+    title: "Đầu tư tài chính",
+    startTime: "23:47",
+    difficulty: "hard",
+    initialSceneId: "s1_chat",
+    tactics: ["sympathy", "greed"],
+    source: {
+      publisher: "Cổng Thông tin điện tử Bộ Công an",
+      title: "Cảnh báo dụ dỗ đầu tư tài chính",
+      url: "https://bocongan.gov.vn/bai-viet/canh-bao-thu-doan-du-do-tham-gia-dau-tu-tai-chinh-san-chung-khoan-tien-ao-tren-khong-gian-mang-d22-t44828",
+      publicationDate: "2023-01-01",
+      accessDate: "2026-08-25"
+    },
+    scenes: {
+      "s1_chat": {
+        id: "s1_chat",
+        channel: "chat",
+        title: "Tin nhắn",
+        content: { text: "Anh vừa chốt lời, em tham gia nhé." },
+        clueIds: [],
+        actions: [
+          { id: "block", label: "Chặn", interaction: "block", nextSceneId: "s_end", riskTag: "safe", effects: {} }
+        ]
+      },
+      "s_end": {
+        id: "s_end",
+        channel: "system",
+        title: "Kết thúc",
+        content: { text: "Hoàn tất case." },
+        clueIds: [],
+        actions: []
+      }
     }
   }
+};
+
+export const CASE_ORDER = [
+  "c1_qr_delivery",
+  "c2_job_commission",
+  "c3_bank_impersonation",
+  "c4_police_impersonation",
+  "c5_family_emergency",
+  "c6_romance_investment"
 ];

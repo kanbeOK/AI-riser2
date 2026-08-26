@@ -1,76 +1,89 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router';
 import { useGameSession } from '../../game/useGameSession';
 import { PhoneShell } from './PhoneShell';
-import { GameHUD } from './GameHUD';
-import { CASES } from '../../game/content/cases';
-import { AIConnector } from './AIConnector';
-import { ChatScene } from './ChatScene';
-import { CaseComplete } from './CaseComplete';
-import { DebriefScreen } from './DebriefScreen';
+import { LeftRail } from './LeftRail';
+import { RightRail } from './RightRail';
+import { CASES, CASE_ORDER } from '../../game/content/cases';
+import { SceneRenderer } from './SceneRenderer';
+import { XRayDebrief } from './XRayDebrief';
+import { ColdOpen } from './ColdOpen';
 
 export function GameShell() {
   const { state, dispatch, reset } = useGameSession();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isDemo = searchParams.get('demo') === 'true';
+  const mode = searchParams.get('mode') || (isDemo ? 'demo' : 'solo');
 
   useEffect(() => {
     if (state.status === 'intro') {
-      setTimeout(() => {
-        dispatch({ type: 'START_RUN', payload: { mode: 'solo', difficulty: 'normal' } });
-      }, 1000);
+      dispatch({ type: 'START_RUN', payload: { mode: mode as any, difficulty: 'normal', seed: isDemo ? 'demo-seed-123' : undefined } });
     }
-  }, [state.status, dispatch]);
+  }, [state.status, dispatch, mode, isDemo]);
 
   useEffect(() => {
     if (state.status === 'playing' && !state.currentCaseId) {
-      const unusedCases = CASES.filter(c => !state.completedCaseIds.includes(c.id));
-      if (unusedCases.length > 0) {
-        const nextCase = unusedCases[Math.floor(Math.random() * unusedCases.length)]!;
+      // Find the first uncompleted case based on CASE_ORDER
+      const nextCaseId = CASE_ORDER.find(id => !state.completedCaseIds.includes(id));
+      if (nextCaseId) {
+        const nextCase = CASES[nextCaseId];
         dispatch({ 
-          type: 'RECEIVE_EVENT', 
-          payload: { 
-            caseId: nextCase.id, 
-            sceneId: 'start', 
-            channel: 'chat', 
-            message: nextCase.initialMessage 
-          } 
-        });
+           type: 'RECEIVE_EVENT', 
+           payload: { 
+             caseId: nextCase.id, 
+             sceneId: nextCase.initialSceneId, 
+             channel: nextCase.scenes[nextCase.initialSceneId].channel,
+           } 
+         });
       } else {
-        dispatch({ type: 'END_RUN', payload: { endingId: 'e_gatekeeper' } });
+        dispatch({ type: 'END_RUN', payload: { endingId: 'e_survivor' } });
       }
     }
   }, [state.status, state.currentCaseId, state.completedCaseIds, dispatch]);
 
-  return (
-    <>
-      <AIConnector state={state} dispatch={dispatch} />
-      {state.status === 'debrief' && <DebriefScreen state={state} dispatch={dispatch} />}
-      <div className="min-h-screen bg-[#071018] text-white p-4 md:p-8 flex flex-col md:flex-row gap-8 items-center justify-center">
-        <div className="w-full md:w-1/3 max-w-sm">
-          {state.status !== 'intro' && <GameHUD state={state} />}
-        </div>
-        
-        <div className="w-full md:w-1/3 flex justify-center">
-          <PhoneShell time={state.currentTime}>
-            <div className="h-full flex flex-col">
-              <div className="bg-surface-alt p-4 shadow-sm border-b border-ink/5 shrink-0">
-                <h2 className="font-bold text-ink text-center">
-                  {state.currentCaseId ? CASES.find(c => c.id === state.currentCaseId)?.title : 'Đang tải...'}
-                </h2>
-              </div>
-              
-              <div className="flex-1 overflow-hidden relative">
-                {state.status === 'case_complete' ? (
-                  <CaseComplete state={state} dispatch={dispatch} />
-                ) : (
-                  <ChatScene state={state} dispatch={dispatch} />
-                )}
-              </div>
-            </div>
-          </PhoneShell>
-        </div>
+  if (state.status === 'intro') {
+    return <ColdOpen />;
+  }
 
-        <div className="w-full md:w-1/3 max-w-sm hidden lg:block">
+  if (state.status === 'debrief') {
+    return <XRayDebrief state={state} dispatch={dispatch} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-[#071018] text-white flex flex-col md:flex-row overflow-hidden relative">
+      {/* Left Rail (Desktop) */}
+      <div className="hidden lg:flex w-[260px] p-6 flex-col border-r border-white/10 shrink-0 bg-[#0A141C]">
+        <LeftRail state={state} />
+      </div>
+
+      {/* Mobile Top HUD */}
+      <div className="lg:hidden p-4 border-b border-white/10 shrink-0 bg-[#0A141C] flex justify-between items-center z-10 shadow-md">
+        <div className="font-bold font-serif">PHANH! {state.currentTime}</div>
+        <div className="flex gap-2 text-xs">
+          <div className="flex items-center gap-1"><span className="text-blue-400">♦</span> {state.walletShield}</div>
+          <div className="flex items-center gap-1"><span className="text-green-400">♦</span> {state.identityShield}</div>
+          <div className="flex items-center gap-1"><span className="text-pink-400">♦</span> {state.familyTrust}</div>
         </div>
       </div>
-    </>
+      
+      {/* Center Stage */}
+      <div className="flex-1 flex flex-col items-center justify-center p-0 lg:p-8 relative overflow-hidden bg-black/20">
+        <PhoneShell time={state.currentTime}>
+           {state.currentSceneId ? (
+              <SceneRenderer state={state} dispatch={dispatch} />
+           ) : (
+              <div className="h-full flex items-center justify-center bg-black">
+                <div className="animate-pulse text-gray-500 text-sm">Đang chờ sự kiện...</div>
+              </div>
+           )}
+        </PhoneShell>
+      </div>
+
+      {/* Right Rail (Desktop) */}
+      <div className="hidden lg:flex w-[340px] p-6 flex-col border-l border-white/10 shrink-0 bg-[#0A141C] overflow-y-auto custom-scrollbar">
+        <RightRail state={state} />
+      </div>
+    </div>
   );
 }

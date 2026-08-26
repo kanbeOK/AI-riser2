@@ -1,31 +1,27 @@
 import React from 'react';
-import { Battery, Wifi, Signal } from 'lucide-react';
 
 export function PhoneShell({ time, children }: { time: string, children: React.ReactNode }) {
   return (
-    <div className="relative mx-auto w-full max-w-[400px] h-[800px] max-h-[90vh] bg-black rounded-[40px] shadow-2xl overflow-hidden border-[12px] border-ink/90 flex flex-col">
-      {/* Notch */}
-      <div className="absolute top-0 inset-x-0 h-6 bg-black rounded-b-3xl w-1/2 mx-auto z-50"></div>
-      
-      {/* Status Bar */}
-      <div className="h-12 bg-black/90 text-white px-6 flex justify-between items-center text-xs font-sans z-40">
-        <span className="font-bold">{time}</span>
-        <div className="flex items-center gap-2">
-          <Signal className="w-3 h-3" />
-          <Wifi className="w-3 h-3" />
-          <Battery className="w-4 h-4" />
+    <div className="w-full h-full lg:w-[400px] lg:h-[800px] lg:rounded-[40px] overflow-hidden lg:border-[12px] border-gray-900 bg-black relative shadow-2xl flex flex-col mx-auto lg:my-auto shrink-0 ring-1 ring-white/10">
+      {/* Top status bar - absolute for immersive, relative for standard apps depending on scene */}
+      <div className="absolute top-0 inset-x-0 h-10 px-6 flex justify-between items-center text-xs text-white z-50 mix-blend-difference pointer-events-none">
+        <div className="font-bold">{time}</div>
+        <div className="flex gap-2">
+          <span>5G</span>
+          <span>100%</span>
         </div>
       </div>
       
-      {/* Content Area */}
-      <div className="flex-1 bg-surface relative overflow-hidden flex flex-col">
+      {/* Notch simulation (Desktop only visually) */}
+      <div className="hidden lg:block absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-[16px] z-50"></div>
+
+      {/* Screen Content */}
+      <div className="flex-1 w-full h-full relative overflow-hidden bg-black text-white">
         {children}
       </div>
       
-      {/* Home Bar */}
-      <div className="h-6 bg-surface-alt flex items-center justify-center pb-2 z-40">
-        <div className="w-1/3 h-1 bg-ink/30 rounded-full"></div>
-      </div>
+      {/* Bottom indicator */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1/3 h-1 bg-white/30 rounded-full z-50 pointer-events-none"></div>
     </div>
   );
 }

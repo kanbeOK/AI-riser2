@@ -1,5 +1,5 @@
 import { GameState, GameAction, DecisionRecord, GameMessage } from './types';
-import { CASES } from './content/cases';
+import { createSeededRandom, cyrb128 } from '../utils/random';
 
 export const INITIAL_STATE: GameState = {
   sessionId: "",
@@ -20,48 +20,66 @@ export const INITIAL_STATE: GameState = {
   
   currentCaseId: null,
   currentSceneId: null,
-  currentChannel: "chat",
+  currentChannel: "system",
   
   discoveredClueIds: [],
   collectedEvidenceIds: [],
   completedCaseIds: [],
   
+  pendingConsequences: [],
+
   decisions: [],
   messageHistory: [],
   unlockedCodexIds: [],
   earnedBadgeIds: [],
   
   status: "intro",
-  endingId: null
+  endingId: null,
+  schemaVersion: 1
 };
+
+function generateId(seed: string, index: number) {
+  const hash = cyrb128(seed + "-" + index);
+  return hash[0].toString(36) + hash[1].toString(36);
+}
+
+function calculateDayProgress(h: number, m: number) {
+    const totalMinutes = h * 60 + m;
+    const startMinutes = 7 * 60 + 30;
+    const endMinutes = 24 * 60;
+    return Math.max(0, Math.min(1, (totalMinutes - startMinutes) / (endMinutes - startMinutes)));
+}
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
-    case "START_RUN":
+    case "START_RUN": {
+      const seed = action.payload.seed || Date.now().toString();
+      const sessionId = generateId(seed, 0);
       return {
         ...INITIAL_STATE,
-        sessionId: Math.random().toString(36).substring(7),
-        seed: action.payload.seed || Date.now().toString(),
+        sessionId,
+        seed,
         mode: action.payload.mode,
         difficulty: action.payload.difficulty,
         status: "playing"
       };
-    
+    }
+      
     case "RECEIVE_EVENT":
       return {
         ...state,
         currentCaseId: action.payload.caseId,
         currentSceneId: action.payload.sceneId,
         currentChannel: action.payload.channel,
-        messageHistory: [
+        messageHistory: action.payload.message ? [
           ...state.messageHistory,
           {
-            id: Date.now().toString(),
+            id: generateId(state.seed, state.messageHistory.length),
             sender: "attacker",
             text: action.payload.message,
             timestamp: state.currentTime
           }
-        ]
+        ] : state.messageHistory
       };
       
     case "INSPECT_CLUE":
@@ -76,13 +94,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "CHOOSE_ACTION": {
       const decision: DecisionRecord = {
-        id: Date.now().toString(),
+        id: generateId(state.seed, state.decisions.length),
         caseId: state.currentCaseId!,
         sceneId: state.currentSceneId!,
         actionId: action.payload.actionId,
         timestamp: state.currentTime,
         safe: action.payload.safe,
-        scoreDelta: action.payload.scoreDelta
+        scoreDelta: action.payload.scoreDelta || 0
       };
       
       const newWallet = Math.max(0, Math.min(100, state.walletShield + (action.payload.walletDelta || 0)));
@@ -90,17 +108,45 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const newFamily = Math.max(0, Math.min(100, state.familyTrust + (action.payload.familyDelta || 0)));
       const newPressure = Math.max(0, Math.min(100, state.pressure + (action.payload.pressureDelta || 0)));
       
-      return {
+      let nextState = {
         ...state,
         decisions: [...state.decisions, decision],
         walletShield: newWallet,
         identityShield: newIdentity,
         familyTrust: newFamily,
         pressure: newPressure,
-        status: action.payload.nextStatus || state.status
+        status: action.payload.nextStatus || state.status,
+        currentSceneId: action.payload.nextSceneId !== undefined ? action.payload.nextSceneId : state.currentSceneId,
       };
+
+      if (action.payload.schedulesConsequences) {
+          nextState.pendingConsequences = [
+              ...nextState.pendingConsequences,
+              ...action.payload.schedulesConsequences
+          ];
+      }
+
+      if (action.payload.revealsClueIds) {
+          const newClues = action.payload.revealsClueIds.filter(id => !nextState.discoveredClueIds.includes(id));
+          if (newClues.length > 0) {
+              nextState.discoveredClueIds = [...nextState.discoveredClueIds, ...newClues];
+              nextState.collectedEvidenceIds = [...nextState.collectedEvidenceIds, ...newClues];
+          }
+      }
+
+      // If time advancement is bundled with action
+      if (action.payload.timeMinutes) {
+          const [h, m] = nextState.currentTime.split(":").map(Number);
+          let newM = m + action.payload.timeMinutes;
+          let newH = h + Math.floor(newM / 60);
+          newM = newM % 60;
+          nextState.currentTime = `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`;
+          nextState.dayProgress = calculateDayProgress(newH, newM);
+      }
+
+      return nextState;
     }
-    
+      
     case "SUBMIT_REPLY":
       return {
         ...state,
@@ -108,7 +154,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         messageHistory: [
           ...state.messageHistory,
           {
-            id: Date.now().toString(),
+            id: generateId(state.seed, state.messageHistory.length),
             sender: "player",
             text: action.payload.text,
             timestamp: state.currentTime
@@ -125,7 +171,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         messageHistory: [
           ...state.messageHistory,
           {
-            id: Date.now().toString(),
+            id: generateId(state.seed, state.messageHistory.length),
             sender: "attacker",
             text: action.payload.message,
             timestamp: state.currentTime,
@@ -135,8 +181,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
       
     case "ADVANCE_TIME": {
-      // Very simple time advancement for now
-      const [h, m] = state.currentTime.split(":").map(Number) as [number, number];
+      const [h, m] = state.currentTime.split(":").map(Number);
       let newM = m + action.payload.minutes;
       let newH = h + Math.floor(newM / 60);
       newM = newM % 60;
@@ -150,14 +195,23 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         currentTime: `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`,
-        timeSlot: newTimeSlot
+        timeSlot: newTimeSlot,
+        dayProgress: calculateDayProgress(newH, newM)
       };
     }
+    
+    case "TRIGGER_CONSEQUENCE":
+      return {
+          ...state,
+          currentCaseId: action.payload.caseId,
+          currentSceneId: action.payload.sceneId,
+          pendingConsequences: state.pendingConsequences.filter(c => !(c.caseId === action.payload.caseId && c.sceneId === action.payload.sceneId))
+      };
 
     case "COMPLETE_CASE":
       return {
         ...state,
-        completedCaseIds: [...state.completedCaseIds, state.currentCaseId!],
+        completedCaseIds: [...state.completedCaseIds, action.payload.caseId],
         currentCaseId: null,
         currentSceneId: null,
         status: "case_complete"

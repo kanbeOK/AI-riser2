@@ -7,7 +7,7 @@ import { GoogleGenAI } from '@google/genai';
 import rateLimit from 'express-rate-limit';
 import { CASES } from './src/game/content/cases.ts';
 
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(process.env.PORT || 8080);
 if (isNaN(PORT) || PORT <= 0) {
   console.error("Invalid PORT environment variable");
   process.exit(1);

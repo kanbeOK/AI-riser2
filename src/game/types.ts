@@ -1,3 +1,5 @@
+import { ScheduledConsequence, SceneAction } from "./schema";
+
 export type OfficialSource = {
   id: string;
   title: string;
@@ -31,11 +33,13 @@ export type GameState = {
 
   currentCaseId: string | null;
   currentSceneId: string | null;
-  currentChannel: "chat" | "call" | "notification" | "browser" | "bank" | "system";
+  currentChannel: "lockscreen" | "notification" | "chat" | "call" | "browser" | "bank" | "official_app" | "task_app" | "system";
 
   discoveredClueIds: string[];
   collectedEvidenceIds: string[];
   completedCaseIds: string[];
+  
+  pendingConsequences: ScheduledConsequence[];
 
   decisions: DecisionRecord[];
   messageHistory: GameMessage[];
@@ -44,6 +48,7 @@ export type GameState = {
 
   status: "intro" | "playing" | "awaiting_ai" | "case_complete" | "debrief" | "finished";
   endingId: string | null;
+  schemaVersion: number;
 };
 
 export type DecisionRecord = {
@@ -70,15 +75,47 @@ export type StartRunPayload = {
   seed?: string;
 };
 
+export type ReceiveEventPayload = {
+  caseId: string;
+  sceneId: string;
+  channel: "lockscreen" | "notification" | "chat" | "call" | "browser" | "bank" | "official_app" | "task_app" | "system";
+  message?: string;
+};
+
+export type ChooseActionPayload = {
+  actionId: string;
+  safe: boolean;
+  scoreDelta?: number;
+  walletDelta?: number;
+  identityDelta?: number;
+  familyDelta?: number;
+  pressureDelta?: number;
+  timeMinutes?: number;
+  nextSceneId?: string | null;
+  nextStatus?: GameState["status"];
+  revealsClueIds?: string[];
+  schedulesConsequences?: ScheduledConsequence[];
+};
+
+export type ApplyResponsePayload = {
+  message: string;
+  pressureDelta?: number;
+};
+
+export type CompleteCasePayload = {
+  caseId: string;
+};
+
 export type GameAction =
   | { type: "START_RUN"; payload: StartRunPayload }
-  | { type: "RECEIVE_EVENT"; payload: any }
+  | { type: "RECEIVE_EVENT"; payload: ReceiveEventPayload }
   | { type: "INSPECT_CLUE"; payload: { clueId: string } }
-  | { type: "CHOOSE_ACTION"; payload: any }
-  | { type: "SUBMIT_REPLY"; payload: { text: string } }
-  | { type: "APPLY_AI_RESPONSE"; payload: any }
-  | { type: "APPLY_FALLBACK_RESPONSE"; payload: any }
+  | { type: "CHOOSE_ACTION"; payload: ChooseActionPayload }
+  | { type: "SUBMIT_REPLY"; payload: { text: string; actionId?: string } }
+  | { type: "APPLY_AI_RESPONSE"; payload: ApplyResponsePayload }
+  | { type: "APPLY_FALLBACK_RESPONSE"; payload: ApplyResponsePayload }
   | { type: "ADVANCE_TIME"; payload: { minutes: number } }
-  | { type: "COMPLETE_CASE"; payload: any }
-  | { type: "END_RUN"; payload: any }
+  | { type: "TRIGGER_CONSEQUENCE"; payload: { caseId: string, sceneId: string } }
+  | { type: "COMPLETE_CASE"; payload: CompleteCasePayload }
+  | { type: "END_RUN"; payload: { endingId: string } }
   | { type: "RESET_RUN" };

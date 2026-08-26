@@ -1,7 +1,8 @@
 import { GameState } from './types';
 
-const SAVE_KEY = 'phanh_game_state_v1';
-const HISTORY_KEY = 'phanh_run_history_v1';
+const SAVE_KEY = 'phanh_game_state_v2';
+const HISTORY_KEY = 'phanh_run_history_v2';
+const CURRENT_SCHEMA_VERSION = 1;
 
 export function saveGameState(state: GameState) {
   try {
@@ -15,7 +16,12 @@ export function loadGameState(): GameState | null {
   try {
     const data = localStorage.getItem(SAVE_KEY);
     if (!data) return null;
-    return JSON.parse(data) as GameState;
+    const parsed = JSON.parse(data) as GameState;
+    if (parsed.schemaVersion !== CURRENT_SCHEMA_VERSION) {
+        console.warn("Schema version mismatch, dropping save.");
+        return null;
+    }
+    return parsed;
   } catch (e) {
     console.error("Failed to load state", e);
     return null;
