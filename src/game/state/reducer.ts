@@ -1,9 +1,7 @@
-
 import { CampaignState, GameAction, ScheduledEvent, FeedMessage, FeedState, CaseFileState } from './types';
-import { CASES } from '../content/cases';
+import { SCENARIOS } from '../content/scenarios';
 
 export const INITIAL_STATE: CampaignState = {
-  schemaVersion: 1,
   seed: "initial",
   mode: "solo",
   day: 1,
@@ -24,7 +22,7 @@ export const INITIAL_STATE: CampaignState = {
     { id: "i1", name: "Lương khô", type: "food", effectValue: 30 },
     { id: "i2", name: "Cà phê đen", type: "food", effectValue: 15 }
   ],
-  upgrades: [],
+  upgrades: {},
   activeSideJob: null,
   feeds: {},
   cases: {},
@@ -57,6 +55,19 @@ function processEvent(state: CampaignState, event: ScheduledEvent): CampaignStat
         messages: []
       }
     };
+    
+    // Auto-create case
+    next.cases = {
+      ...next.cases,
+      [event.payload.feedId]: {
+        id: event.payload.feedId,
+        title: event.payload.title,
+        status: "open",
+        evidenceIds: [],
+        verdict: null
+      }
+    };
+    
     next.notifications = [...next.notifications, {
       id: `notif_${event.id}`,
       time: state.minuteOfDay,
@@ -85,6 +96,8 @@ function processEvent(state: CampaignState, event: ScheduledEvent): CampaignStat
         }
       };
     }
+  } else if (event.type === "network_activity") {
+     next.networkHeat = clamp(next.networkHeat + event.payload.heatDelta, 0, 100);
   }
   return next;
 }
@@ -100,17 +113,25 @@ function advanceDay(state: CampaignState): CampaignState {
     day: state.day,
     salaryEarned: 0,
     expenses: 0,
-    casesResolved: Object.values(state.cases).filter(c => c.status !== "open").length,
+    casesResolved: Object.values(state.cases).filter(c => c.status !== "open").length, // Simplification
     falsePositives: 0,
     victimsProtected: 0,
     summary: `Kết thúc ngày ${state.day}.`
   };
 
   // Rent check
-  if (state.day === state.rentDueDay && !state.rentPaid) {
-    ending = "debrief";
-    speed = 0;
-    unlocked.push("e_nguoi_tot_khong_nha");
+  let nextCredits = state.credits;
+  let rentPaid = state.rentPaid;
+  if (state.day >= state.rentDueDay && !state.rentPaid) {
+    if (nextCredits >= state.rentAmount) {
+       nextCredits -= state.rentAmount;
+       rentPaid = true;
+       // auto paid
+    } else {
+       ending = "debrief";
+       speed = 0;
+       unlocked.push("e_nguoi_tot_khong_nha");
+    }
   }
 
   // Health check
@@ -120,99 +141,81 @@ function advanceDay(state: CampaignState): CampaignState {
     unlocked.push("e_kiet_suc");
   }
 
-  // Reset for next day
-  const nextState = {
+  if (nextDay > 3 && ending !== "debrief") {
+     ending = "debrief";
+     speed = 0;
+     unlocked.push("e_luoi_khep_kin");
+  }
+
+  return {
     ...state,
     day: nextDay,
     minuteOfDay: 7 * 60,
-    phase: "morning" as const,
-    location: "apartment" as const,
-    status: ending,
+    phase: "morning",
     speed: speed,
+    status: ending,
     endingsUnlocked: unlocked,
     dailyReports: [...state.dailyReports, dailyReport],
-    scheduledEvents: [...state.scheduledEvents]
+    credits: nextCredits,
+    rentPaid: rentPaid,
+    activeSideJob: null // reset side job daily
   };
-
-  if (ending !== "debrief") {
-    // Schedule events for next day
-    if (nextDay === 2) {
-      nextState.scheduledEvents.push(
-        { id: `solo_start_2`, day: 2, minute: 7 * 60 + 5, type: "feed_start", payload: { feedId: "c2_job_commission", title: "Việc nhẹ lương cao", type: "social" } },
-        { id: `solo_msg_2_1`, day: 2, minute: 7 * 60 + 6, type: "feed_message", payload: { feedId: "c2_job_commission", message: { id: "m_solo_2_1", senderId: "scammer", senderName: "Admin Tuyển Dụng", text: "Tuyển CTV đánh giá sản phẩm. Làm tại nhà, thu nhập 500k-1tr/ngày. Nhấn link để đăng ký nhận 100k ngay.", timestamp: 7 * 60 + 6, clues: ["đánh giá sản phẩm", "nhận 100k ngay"] } } }
-      );
-    } else if (nextDay === 3) {
-      nextState.scheduledEvents.push(
-        { id: `solo_start_3`, day: 3, minute: 7 * 60 + 5, type: "feed_start", payload: { feedId: "c3_bank_impersonation", title: "Mạo danh ngân hàng", type: "call" } },
-        { id: `solo_msg_3_1`, day: 3, minute: 7 * 60 + 6, type: "feed_message", payload: { feedId: "c3_bank_impersonation", message: { id: "m_solo_3_1", senderId: "scammer", senderName: "0287300xxxx", text: "Tài khoản của anh/chị vừa bị trừ 5 triệu. Đọc mã OTP gửi về máy để hủy giao dịch.", timestamp: 7 * 60 + 6, clues: ["đọc mã OTP", "bị trừ 5 triệu"] } } }
-      );
-    } else if (nextDay > 3) {
-      nextState.status = "debrief";
-      nextState.speed = 0;
-      nextState.endingsUnlocked.push("e_luoi_khep_kin");
-    }
-  }
-
-  return nextState;
 }
 
 export function campaignReducer(state: CampaignState, action: GameAction): CampaignState {
   switch (action.type) {
-    case "CREATE_CASE": {
-      if (state.cases[action.payload.id]) return state;
-      return {
-        ...state,
-        cases: {
-          ...state.cases,
-          [action.payload.id]: {
-            id: action.payload.id,
-            title: action.payload.title,
-            status: "open",
-            evidenceIds: [],
-            verdict: null
-          }
-        }
-      };
-    }
     case "START_CAMPAIGN": {
-      const seed = action.payload.seed || "random_seed_123";
-      const isDemo = action.payload.mode === "demo";
+      const mode = action.payload.mode;
+      const seed = action.payload.seed || Date.now().toString();
       
-      let nextState = {
-        ...INITIAL_STATE,
-        seed,
-        mode: action.payload.mode,
-        internetPaidThroughDay: 0,
+      let nextState = { 
+        ...INITIAL_STATE, 
+        mode, 
+        seed, 
         status: "playing" as const,
-        location: (isDemo ? "workstation" : "apartment") as "apartment" | "workstation",
-        speed: isDemo ? 0 : 0 as const,
-        scheduledEvents: [] as ScheduledEvent[]
+        location: (mode === "demo" ? "workstation" : "apartment") as "apartment" | "workstation",
+        speed: (mode === "demo" ? 1 : 0) as 0|1|2|4
       };
 
-      if (isDemo) {
-        // Inject feeds directly for zero-frame rendering
-        nextState.feeds = {
-          c1_qr_delivery: {
-            id: "c1_qr_delivery", title: "Mã QR Giao hàng", type: "chat", status: "active",
-            messages: [{ id: "m_demo_1", senderId: "scammer", senderName: "Shipper", text: "Chào bạn, tôi là shipper. Bạn có đơn hàng 250k. Vui lòng quét mã QR này để thanh toán vì tôi đang vội.", timestamp: 7 * 60 + 1, clues: ["mã QR này", "đang vội"] }]
-          },
-          c3_bank_impersonation: {
-            id: "c3_bank_impersonation", title: "Mạo danh ngân hàng", type: "call", status: "active",
-            messages: [{ id: "m_demo_2", senderId: "scammer", senderName: "0287300xxxx", text: "Tài khoản của anh/chị vừa bị trừ 5 triệu. Đọc mã OTP gửi về máy để hủy giao dịch.", timestamp: 7 * 60 + 1, clues: ["đọc mã OTP", "bị trừ 5 triệu"] }]
-          }
-        };
+      const scheduleScenario = (id: string, startMinute: number) => {
+         const scen = SCENARIOS[id];
+         if (!scen) return;
+         nextState.scheduledEvents.push({
+           id: `start_${id}`, day: 1, minute: startMinute, type: "feed_start",
+           payload: { feedId: id, title: scen.title, type: scen.type }
+         });
+         
+         let currentMin = startMinute;
+         scen.beats.forEach((beat, idx) => {
+            currentMin += beat.waitBefore;
+            nextState.scheduledEvents.push({
+               id: `msg_${id}_${idx}`, day: 1, minute: currentMin, type: "feed_message",
+               payload: {
+                  feedId: id,
+                  message: {
+                     id: beat.id, senderId: beat.sender, senderName: beat.senderName,
+                     text: beat.text, timestamp: currentMin, clues: beat.clues
+                  }
+               }
+            });
+         });
+      };
+
+      if (mode === "demo") {
+        scheduleScenario("c1_qr_delivery", 7 * 60 + 1);
+        scheduleScenario("c2_legit_shipper", 7 * 60 + 2);
       } else {
-        // Solo mode: scheduled for 07:01, 07:02
-        nextState.scheduledEvents.push(
-          { id: "solo_start_1", day: 1, minute: 7 * 60 + 1, type: "feed_start", payload: { feedId: "c1_qr_delivery", title: "Mã QR Giao hàng", type: "chat" } },
-          { id: "solo_msg_1", day: 1, minute: 7 * 60 + 2, type: "feed_message", payload: { feedId: "c1_qr_delivery", message: { id: "m_solo_1", senderId: "scammer", senderName: "Shipper Giao Hàng Nhanh", text: "Chào bạn, tôi là shipper. Bạn có đơn hàng 250k. Vui lòng quét mã QR này để thanh toán vì tôi đang vội.", timestamp: 7 * 60 + 2, clues: ["mã QR này", "đang vội"] } } }
-        );
+        // Solo mode: starts at 7:00, wait a few minutes
+        scheduleScenario("c1_qr_delivery", 7 * 60 + 5);
+        scheduleScenario("c2_legit_shipper", 7 * 60 + 15);
       }
       return nextState;
     }
+    
     case "SET_SPEED": {
       return { ...state, speed: action.payload.speed };
     }
+    
     case "TICK": {
       if (state.status !== "playing" || state.speed === 0) return state;
       let newMinute = state.minuteOfDay + action.payload.minutes;
@@ -244,23 +247,43 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
       
       return nextState;
     }
+    
     case "PROCESS_EVENT": {
+      if (state.processedEventIds.includes(action.payload.event.id)) return state;
       return processEvent(state, action.payload.event);
     }
+    
     case "CHANGE_LOCATION": {
       return { ...state, location: action.payload.location };
     }
+    
     case "CHANGE_PHASE": {
       return { ...state, phase: action.payload.phase };
     }
+    
     case "EXTRACT_EVIDENCE": {
       if (state.evidence.find(e => e.id === action.payload.token.id)) return state;
+      
+      // auto-assign to case if feedId matches caseId
+      const caseId = action.payload.token.feedId;
+      const c = state.cases[caseId];
+      
+      let nextCases = state.cases;
+      if (c) {
+         nextCases = {
+            ...state.cases,
+            [caseId]: { ...c, evidenceIds: [...c.evidenceIds, action.payload.token.id] }
+         };
+      }
+      
       return {
         ...state,
-        evidence: [...state.evidence, action.payload.token],
+        cases: nextCases,
+        evidence: [...state.evidence, { ...action.payload.token, caseId: c ? caseId : null }],
         notifications: [...state.notifications, { id: `ev_${action.payload.token.id}`, time: state.minuteOfDay, message: `Trích xuất bằng chứng: ${action.payload.token.label}`, type: "info" }]
       };
     }
+    
     case "ASSIGN_EVIDENCE": {
       const { evidenceId, caseId } = action.payload;
       const c = state.cases[caseId];
@@ -275,6 +298,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
         evidence: state.evidence.map(e => e.id === evidenceId ? { ...e, caseId } : e)
       };
     }
+    
     case "LINK_EVIDENCE": {
       const edge = action.payload;
       return {
@@ -282,6 +306,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
         graphEdges: [...state.graphEdges, { id: `${edge.sourceId}_${edge.targetId}`, ...edge }]
       };
     }
+    
     case "EAT": {
       const itemIndex = state.inventory.findIndex(i => i.id === action.payload.itemId);
       if (itemIndex === -1) return state;
@@ -294,6 +319,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
         hunger: clamp(state.hunger + item!.effectValue, 0, 100)
       };
     }
+    
     case "BUY_ITEM": {
       if (state.credits < action.payload.cost) return state;
       return {
@@ -302,28 +328,34 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
         inventory: [...state.inventory, action.payload.item]
       };
     }
+    
     case "SLEEP": {
-      let nextState = { ...state, energy: clamp(state.energy + 80, 0, 100) };
+      let nextState = { ...state, energy: clamp(state.energy + 80, 0, 100), phase: "sleep" as const };
       return advanceDay(nextState);
     }
+    
     case "END_DAY": {
       return advanceDay(state);
     }
+    
     case "PAY_RENT": {
       if (state.credits >= state.rentAmount && !state.rentPaid) {
         return { ...state, credits: state.credits - state.rentAmount, rentPaid: true };
       }
       return state;
     }
+    
     case "PAY_INTERNET": {
       if (state.credits >= 12 && state.internetPaidThroughDay < state.day) {
         return { ...state, credits: state.credits - 12, internetPaidThroughDay: state.day };
       }
       return state;
     }
+    
     case "START_JOB": {
       return { ...state, activeSideJob: action.payload.job };
     }
+    
     case "WORK_JOB": {
       if (!state.activeSideJob) return state;
       const prog = clamp(state.activeSideJob.progress + action.payload.progress, 0, state.activeSideJob.maxProgress);
@@ -333,8 +365,8 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
       const timeCost = 30 * action.payload.progress;
       
       let next = { 
-        ...state, 
-        energy: clamp(state.energy - energyCost, 0, 100),
+         ...state, 
+         energy: clamp(state.energy - energyCost, 0, 100),
         minuteOfDay: Math.min(state.minuteOfDay + timeCost, 24 * 60 - 1)
       };
 
@@ -342,7 +374,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
         return {
           ...next,
           credits: next.credits + state.activeSideJob.reward,
-          activeSideJob: null,
+          activeSideJob: null, // job is done for the day
           notifications: [...next.notifications, { id: `job_${next.day}_${next.minuteOfDay}`, time: next.minuteOfDay, message: `Hoàn thành công việc: +${state.activeSideJob.reward} CR`, type: "success" }]
         };
       }
@@ -351,6 +383,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
         activeSideJob: { ...state.activeSideJob, progress: prog }
       };
     }
+    
     case "OPERATIONAL_ACTION": {
       const { caseId, action: opAction } = action.payload;
       const c = state.cases[caseId];
@@ -367,7 +400,7 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
       
       // check links involving these evidence
       const hasLink = state.graphEdges.some(edge => 
-        c.evidenceIds.includes(edge.sourceId) || c.evidenceIds.includes(edge.targetId)
+         c.evidenceIds.includes(edge.sourceId) || c.evidenceIds.includes(edge.targetId)
       );
 
       if (opAction === "warned") {
@@ -379,9 +412,11 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
       } else if (opAction === "banned" || opAction === "escalated") {
         if (caseEvidence.length >= 3 && entityTypes.size >= 2) isValid = true;
         else errorReason = "Cần ít nhất 3 bằng chứng và 2 loại thực thể khác nhau";
+      } else if (opAction === "ignored") {
+        isValid = true;
       }
       
-      if (!isValid) {
+      if (!isValid) { 
          // Return state with notification
          return {
            ...state,
@@ -389,25 +424,32 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
          };
       }
 
-      let ending = state.status;
-      let speed = state.speed;
-      if (state.mode === 'demo') {
-         ending = 'debrief';
-         speed = 0;
-      }
-
       let trustDelta = 0;
       let creditsDelta = 0;
 
-      if (opAction === "warned") {
-        trustDelta = 5;
-        creditsDelta = 20;
-      } else if (opAction === "frozen") {
-        trustDelta = 10;
-        creditsDelta = 30;
-      } else if (opAction === "banned" || opAction === "escalated") {
-        trustDelta = 15;
-        creditsDelta = 40;
+      // Simple scoring based on the scenario ID being a scam or legit.
+      // E.g., c2_legit_shipper is legit. Freezing/banning them is a false positive.
+      if (caseId === "c2_legit_shipper") {
+         if (opAction !== "ignored") {
+             trustDelta = -10;
+             creditsDelta = -50;
+         } else {
+             trustDelta = +5;
+             creditsDelta = +10;
+         }
+      } else {
+         if (opAction === "warned") {
+           trustDelta = 5;
+           creditsDelta = 20;
+         } else if (opAction === "frozen") {
+           trustDelta = 10;
+           creditsDelta = 30;
+         } else if (opAction === "banned" || opAction === "escalated") {
+           trustDelta = 15;
+           creditsDelta = 40;
+         } else if (opAction === "ignored") {
+           trustDelta = -10;
+         }
       }
 
       return {
@@ -416,13 +458,12 @@ export function campaignReducer(state: CampaignState, action: GameAction): Campa
           ...state.cases,
           [caseId]: { ...c, status: "resolved", verdict: opAction }
         },
-        agencyTrust: clamp(state.agencyTrust + trustDelta, 0, 100),
+        agencyTrust: clamp((state.agencyTrust || 50) + trustDelta, 0, 100),
         credits: state.credits + creditsDelta,
-        notifications: [...state.notifications, { id: `case_${caseId}`, time: state.minuteOfDay, message: `Vụ án xử lý: ${opAction} (+${creditsDelta} CR)`, type: "success" }],
-        status: ending,
-        speed: speed
+        notifications: [...state.notifications, { id: `case_${caseId}`, time: state.minuteOfDay, message: `Vụ án xử lý: ${opAction} (${creditsDelta > 0 ? '+' : ''}${creditsDelta} CR)`, type: "success" }]
       };
     }
+    
     default:
       return state;
   }

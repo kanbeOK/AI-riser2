@@ -58,7 +58,7 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
       const triggerMin = state.minuteOfDay + 1;
       const respId = `m_${state.day}_${triggerMin}_sys_${feed.messages.length}`; 
       
-      const newClues = data.newClueId ? [data.newClueId] : [];
+      const newClues = data.clues || [];
       
       dispatch({ type: 'PROCESS_EVENT', payload: { 
         event: { 
@@ -137,7 +137,7 @@ export function FeedView({ state, dispatch }: { state: CampaignState, dispatch: 
                      + MỞ HỒ SƠ
                    </button>
                  )}
-                 <span className="text-[#86949B] px-2 py-1 bg-[#2A363D] rounded">{feed.type.toUpperCase()}</span>
+                 <span className="text-[#86949B] px-2 py-1 bg-[#2A363D] rounded">{feed.type || "chat".toUpperCase()}</span>
                </div>
             </div>
             <div className="flex-1 p-4 overflow-y-auto space-y-4">

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { GoogleGenAI } from '@google/genai';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { CASES } from './src/game/content/cases.js';
+import { SCENARIOS } from './src/game/content/scenarios.js';
 
 const PORT = Number(process.env.PORT || 8080);
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
@@ -40,21 +40,26 @@ export function createApp() {
 
       const { scenarioId, actionId, history, userMessage } = parsed.data;
       
-      const scenario = CASES[scenarioId];
+      const scenario = SCENARIOS[scenarioId];
       if (!scenario) {
         return res.status(400).json({ error: { code: 400, message: "Invalid scenario", retryable: false } });
       }
 
       const aiClient = getGemini();
+      
       if (!aiClient) {
         // Deterministic Fallback
+        const fallbackBeat = scenario.beats[0];
         return res.json({
-          message: scenario.initialMessage + " (Tôi đang bận, xin vui lòng làm theo yêu cầu nhanh lên!)",
+          message: fallbackBeat ? fallbackBeat.text : "Tôi đang bận, xin vui lòng làm theo yêu cầu nhanh lên!",
           tactic: scenario.tactics[0] || "Gây áp lực",
           pressureDelta: 10,
+          clues: fallbackBeat ? fallbackBeat.clues : [],
           source: 'deterministic_fallback'
         });
       }
+
+      const allowedClues = Object.keys(scenario.evidenceBase);
 
       const chat = aiClient.chats.create({
         model: GEMINI_MODEL,
@@ -69,7 +74,7 @@ export function createApp() {
           - message: Lời thoại của bạn.
           - tactic: Tên chiến thuật bạn đang dùng.
           - pressureDelta: Mức độ tăng/giảm áp lực tâm lý (số nguyên từ -20 đến +20).
-          - newClueId: (Tùy chọn) Mã bằng chứng mới nếu có (chỉ tạo nếu thực sự cần thiết, dạng text ngắn gọn).`,
+          - clueKey: (Tùy chọn) Chọn MỘT mã bằng chứng hợp lệ từ danh sách sau nếu phù hợp với ngữ cảnh: ${allowedClues.join(", ")}`,
           responseMimeType: 'application/json',
           responseSchema: {
             type: "object",
@@ -77,7 +82,7 @@ export function createApp() {
               message: { type: "string" },
               tactic: { type: "string" },
               pressureDelta: { type: "number" },
-              newClueId: { type: "string" }
+              clueKey: { type: "string" }
             },
             required: ["message", "tactic", "pressureDelta"]
           }
@@ -87,23 +92,31 @@ export function createApp() {
       try {
         const response = await chat.sendMessage({ message: userMessage || "Bắt đầu" });
         const data = JSON.parse(response.text || '{}');
+        
+        let validClueKey = undefined;
+        if (data.clueKey && allowedClues.includes(data.clueKey)) {
+          validClueKey = data.clueKey;
+        }
+
         res.json({ 
           message: data.message || "Tiếp tục làm theo hướng dẫn của tôi.", 
           tactic: data.tactic || "Thuyết phục",
-          pressureDelta: data.pressureDelta || 0,
-          newClueId: data.newClueId,
+          pressureDelta: Math.max(-20, Math.min(20, data.pressureDelta || 0)),
+          clues: validClueKey ? [validClueKey] : [],
           source: 'gemini' 
         });
       } catch (e) {
         console.error("Gemini Error:", e);
+        const fallbackBeat = scenario.beats[0];
         res.json({ 
-          message: "Mạng đang chậm, nhanh tay chuyển khoản hoặc gửi thông tin đi bạn!", 
+          message: fallbackBeat ? fallbackBeat.text : "Mạng đang chậm, nhanh tay chuyển khoản hoặc gửi thông tin đi bạn!", 
           tactic: "Ép buộc",
           pressureDelta: 5,
+          clues: fallbackBeat ? fallbackBeat.clues : [],
           source: 'deterministic_fallback' 
         });
       }
-    } catch (error) {
+} catch (error) {
       res.status(500).json({ error: { code: 500, message: "Internal server error", retryable: true } });
     }
   });

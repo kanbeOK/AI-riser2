@@ -1,180 +1,96 @@
-import React, { useState } from 'react';
-import { CampaignState, GameAction, CaseFileState } from '../../game/state/types';
+import React from 'react';
+import { CampaignState, GameAction } from '../../game/state/types';
+import { ShieldAlert, ShieldCheck, AlertTriangle } from 'lucide-react';
 
-export function CaseView({ state, dispatch }: { state: CampaignState, dispatch: React.Dispatch<GameAction> }) {
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [newCaseTitle, setNewCaseTitle] = useState("");
+export function CaseView({ state, dispatch, caseId }: { state: CampaignState, dispatch: React.Dispatch<GameAction>, caseId: string | null }) {
+  if (!caseId) return <div className="p-8 text-center text-[#86949B]">Chưa chọn hồ sơ</div>;
+  const c = state.cases[caseId];
+  if (!c) return <div className="p-8 text-center text-[#86949B]">Không tìm thấy hồ sơ</div>;
 
-  const cases = Object.values(state.cases);
-  const selectedCase = selectedCaseId ? state.cases[selectedCaseId] : null;
+  const caseEvidence = state.evidence.filter(e => c.evidenceIds.includes(e.id));
+  const entityTypes = new Set(caseEvidence.map(e => e.entityType));
+  const hasLink = state.graphEdges.some(edge => c.evidenceIds.includes(edge.sourceId) || c.evidenceIds.includes(edge.targetId));
 
-  const handleCreate = () => {
-    if (!newCaseTitle.trim()) return;
-    const id = `case_${state.day}_${state.minuteOfDay}_${Object.keys(state.cases).length}`;
-    dispatch({ type: 'CREATE_CASE', payload: { id, title: newCaseTitle } });
-    setNewCaseTitle("");
-    setSelectedCaseId(id);
+  const handleAction = (action: 'warned' | 'frozen' | 'banned' | 'escalated' | 'ignored') => {
+     dispatch({ type: 'OPERATIONAL_ACTION', payload: { caseId, action } });
   };
-
-  const handleAssignEvidence = (evidenceId: string) => {
-    if (!selectedCaseId) return;
-    dispatch({ type: 'ASSIGN_EVIDENCE', payload: { evidenceId, caseId: selectedCaseId } });
-  };
-
-  // Get unassigned evidence
-  const unassignedEvidence = state.evidence.filter(e => !e.caseId);
-  const assignedEvidence = state.evidence.filter(e => e.caseId === selectedCaseId);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full text-sm">
-      {/* Case List */}
-      <div className="bg-[#11171C] border border-[#2A363D] rounded-xl flex flex-col overflow-hidden h-[500px] col-span-1">
-        <div className="p-3 border-b border-[#2A363D] bg-[#172127] font-bold text-xs text-[#F2B35D]">
-           DANH SÁCH HỒ SƠ
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-2">
-          {cases.length === 0 && (
-            <div className="text-center text-[#86949B] p-4 text-xs italic">
-              Chưa có hồ sơ nào.
-            </div>
-          )}
-          {cases.map(c => (
-            <button 
-              key={c.id} 
-              onClick={() => setSelectedCaseId(c.id)}
-              className={`w-full text-left p-3 rounded border transition-colors ${selectedCaseId === c.id ? 'bg-[#2A363D] border-[#45D6BF] text-[#E9EEE9]' : 'bg-[#172127] border-transparent hover:border-[#2A363D] text-[#86949B]'}`}
-            >
-              <div className="font-bold">{c.title}</div>
-              <div className="text-[10px] mt-1 flex justify-between">
-                <span>{c.evidenceIds.length} Bằng chứng</span>
-                <span className={`uppercase ${c.status === 'open' ? 'text-[#45D6BF]' : 'text-[#FF5A5F]'}`}>{c.status}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-        <div className="p-3 border-t border-[#2A363D] bg-[#172127] shrink-0">
-          <div className="flex gap-2">
-            <input 
-              type="text" 
-              value={newCaseTitle}
-              onChange={(e) => setNewCaseTitle(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              className="flex-1 bg-[#11171C] border border-[#2A363D] rounded px-2 py-1.5 text-xs text-[#E9EEE9] focus:outline-none focus:border-[#F2B35D]"
-              placeholder="Tên hồ sơ mới..."
-            />
-            <button onClick={handleCreate} className="px-3 py-1.5 bg-[#F2B35D] text-[#080B0E] font-bold rounded text-xs hover:bg-[#F4C584] transition-colors">
-              +
-            </button>
-          </div>
-        </div>
-      </div>
+    <div className="flex-1 overflow-y-auto p-8 font-mono flex flex-col gap-8">
+       <div className="border-b border-[#2A363D] pb-4">
+          <h2 className="text-2xl font-bold text-[#EDF2EE] uppercase tracking-widest">{c.title}</h2>
+          <div className="text-sm text-[#86949B]">MÃ HỒ SƠ: {c.id} | TRẠNG THÁI: <span className={c.status === 'open' ? 'text-[#E7A64A]' : 'text-[#63E6C5]'}>{c.status.toUpperCase()}</span></div>
+       </div>
 
-      {/* Case Details */}
-      <div className="bg-[#11171C] border border-[#2A363D] rounded-xl flex flex-col overflow-hidden h-[500px] col-span-2">
-        {!selectedCase ? (
-          <div className="flex-1 flex items-center justify-center text-[#86949B] p-8 text-center border-2 border-dashed border-[#2A363D] m-4 rounded-xl">
-             <div className="flex flex-col items-center">
-               <div className="text-3xl mb-2">📄</div>
-               Chọn một hồ sơ bên trái hoặc tạo mới để xem chi tiết.
+       <div>
+          <h3 className="text-[#63E6C5] font-bold uppercase tracking-widest mb-4">Bằng chứng thu thập ({caseEvidence.length})</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             {caseEvidence.map(ev => (
+                <div key={ev.id} className="border border-[#2A363D] bg-[#172127] p-4 rounded flex flex-col gap-2">
+                   <div className="text-[10px] text-[#E7A64A] font-bold uppercase">{ev.entityType}</div>
+                   <div className="text-sm text-[#EDF2EE]">{ev.displayValue || ev.value}</div>
+                   {ev.lookupResult && (
+                      <div className="text-xs text-[#86949B] bg-[#07090C] p-2 rounded mt-2 border border-[#2A363D]">
+                         {ev.lookupResult}
+                      </div>
+                   )}
+                </div>
+             ))}
+             {caseEvidence.length === 0 && <div className="text-[#86949B] italic text-sm">Chưa có bằng chứng nào được ghim vào hồ sơ này.</div>}
+          </div>
+       </div>
+
+       {c.status === 'open' && (
+          <div>
+             <h3 className="text-[#FF5B5B] font-bold uppercase tracking-widest mb-4">Can thiệp & Quyết định</h3>
+             <div className="flex flex-col gap-4">
+                
+                {/* Action 1: Bỏ qua */}
+                <div className="border border-[#2A363D] p-4 flex justify-between items-center rounded bg-[#172127]">
+                   <div>
+                      <div className="font-bold text-[#EDF2EE]">BỎ QUA / ĐÓNG HỒ SƠ</div>
+                      <div className="text-xs text-[#86949B]">Hồ sơ này không có dấu hiệu vi phạm hoặc là báo cáo nhầm.</div>
+                   </div>
+                   <button onClick={() => handleAction('ignored')} className="bg-[#2A363D] text-[#EDF2EE] px-4 py-2 rounded font-bold hover:bg-[#86949B] transition-colors uppercase tracking-widest text-xs">
+                      Xác nhận bỏ qua
+                   </button>
+                </div>
+
+                {/* Action 2: Cảnh báo */}
+                <div className="border border-[#2A363D] p-4 flex justify-between items-center rounded bg-[#172127]">
+                   <div>
+                      <div className="font-bold text-[#E7A64A]">CẢNH BÁO NẠN NHÂN</div>
+                      <div className="text-xs text-[#86949B]">Yêu cầu: Ít nhất 1 bằng chứng. Hiệu tại: {caseEvidence.length}/1</div>
+                   </div>
+                   <button disabled={caseEvidence.length < 1} onClick={() => handleAction('warned')} className="bg-[#E7A64A] text-black px-4 py-2 rounded font-bold disabled:opacity-50 hover:bg-yellow-500 transition-colors uppercase tracking-widest text-xs">
+                      Gửi cảnh báo
+                   </button>
+                </div>
+
+                {/* Action 3: Đóng băng */}
+                <div className="border border-[#2A363D] p-4 flex justify-between items-center rounded bg-[#172127]">
+                   <div>
+                      <div className="font-bold text-[#FF5B5B]">ĐÓNG BĂNG TÀI KHOẢN ĐÍCH</div>
+                      <div className="text-xs text-[#86949B]">Yêu cầu: 2 bằng chứng & 1 liên kết đồ thị. Hiện tại: {caseEvidence.length}/2 bằng chứng, {hasLink ? 'Đã có' : 'Chưa có'} liên kết.</div>
+                   </div>
+                   <button disabled={caseEvidence.length < 2 || !hasLink} onClick={() => handleAction('frozen')} className="bg-[#FF5B5B] text-black px-4 py-2 rounded font-bold disabled:opacity-50 hover:bg-red-500 transition-colors uppercase tracking-widest text-xs">
+                      Yêu cầu đóng băng
+                   </button>
+                </div>
+
+                {/* Action 4: Ban / Escalated */}
+                <div className="border border-[#2A363D] p-4 flex justify-between items-center rounded bg-[#172127]">
+                   <div>
+                      <div className="font-bold text-[#FF5B5B]">CHUYỂN GIAO CƠ QUAN CHỨC NĂNG</div>
+                      <div className="text-xs text-[#86949B]">Yêu cầu: 3 bằng chứng & 2 loại thực thể. Hiện tại: {caseEvidence.length}/3 bằng chứng, {entityTypes.size}/2 loại.</div>
+                   </div>
+                   <button disabled={caseEvidence.length < 3 || entityTypes.size < 2} onClick={() => handleAction('escalated')} className="bg-[#FF5B5B] text-black px-4 py-2 rounded font-bold disabled:opacity-50 hover:bg-red-500 transition-colors uppercase tracking-widest text-xs flex items-center gap-2">
+                      <ShieldAlert size={14} /> Triệt phá
+                   </button>
+                </div>
              </div>
           </div>
-        ) : (
-          <>
-            <div className="p-4 border-b border-[#2A363D] bg-[#172127] shrink-0 flex justify-between items-start">
-               <div>
-                 <div className="text-[#86949B] text-[10px] mb-1 font-mono">{selectedCase.id}</div>
-                 <h2 className="text-xl font-bold text-[#E9EEE9]">{selectedCase.title}</h2>
-               </div>
-               <div className={`px-2 py-1 rounded text-xs font-bold uppercase ${selectedCase.status === 'open' ? 'bg-[#45D6BF]/20 text-[#45D6BF]' : 'bg-[#FF5A5F]/20 text-[#FF5A5F]'}`}>
-                 {selectedCase.status}
-               </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4 flex gap-4">
-               {/* Evidence in this case */}
-               <div className="flex-1 border border-[#2A363D] rounded bg-[#172127] flex flex-col">
-                 <div className="p-2 border-b border-[#2A363D] font-bold text-xs text-[#E9EEE9] bg-[#2A363D]">
-                   BẰNG CHỨNG TRONG HỒ SƠ
-                 </div>
-                 <div className="flex-1 p-2 space-y-2 overflow-y-auto">
-                   {assignedEvidence.length === 0 ? (
-                     <div className="text-center text-[#86949B] text-xs mt-4">Nhấp vào bằng chứng từ danh sách bên phải để thêm vào hồ sơ.</div>
-                   ) : (
-                     assignedEvidence.map(e => (
-                       <div key={e.id} className="p-2 bg-[#11171C] border border-[#45D6BF]/30 rounded text-xs">
-                          <div className="flex justify-between mb-1">
-                            <span className="font-bold text-[#45D6BF]">{e.label}</span>
-                            <span className="text-[#86949B] text-[10px] uppercase">{e.entityType}</span>
-                          </div>
-                          <div className="text-[#E9EEE9]">{e.value}</div>
-                       </div>
-                     ))
-                   )}
-                 </div>
-               </div>
-
-               {/* Unassigned evidence */}
-               <div className="w-64 border border-[#2A363D] rounded bg-[#172127] flex flex-col shrink-0">
-                 <div className="p-2 border-b border-[#2A363D] font-bold text-xs text-[#86949B] bg-[#2A363D]">
-                   BẰNG CHỨNG TỰ DO
-                 </div>
-                 <div className="flex-1 p-2 space-y-2 overflow-y-auto">
-                   {unassignedEvidence.length === 0 ? (
-                     <div className="text-center text-[#86949B] text-[10px] mt-4">Không có bằng chứng chưa phân loại.</div>
-                   ) : (
-                     unassignedEvidence.map(e => (
-                       <button 
-                         key={e.id} 
-                         onClick={() => handleAssignEvidence(e.id)}
-                         className="w-full text-left p-2 bg-[#11171C] border border-[#2A363D] hover:border-[#F2B35D] rounded text-xs transition-colors group"
-                         title="Thêm vào hồ sơ này"
-                       >
-                          <div className="flex justify-between mb-1">
-                            <span className="font-bold text-[#F2B35D] truncate">{e.label}</span>
-                            <span className="opacity-0 group-hover:opacity-100 text-[#45D6BF]">➔</span>
-                          </div>
-                          <div className="text-[#E9EEE9] truncate">{e.value}</div>
-                       </button>
-                     ))
-                   )}
-                 </div>
-               </div>
-            </div>
-            
-            <div className="p-4 border-t border-[#2A363D] bg-[#172127] shrink-0 flex justify-between items-center">
-              
-              <div className="text-xs flex flex-col gap-1">
-                <span className="text-[#86949B]">Quyết định can thiệp:</span>
-                <span className="text-[#45D6BF] font-mono">BC: {assignedEvidence.length}/3 | Loại: {new Set(assignedEvidence.map(e => e.entityType)).size}/2</span>
-              </div>
-
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => dispatch({ type: 'OPERATIONAL_ACTION', payload: { caseId: selectedCase.id, action: 'warned' } })}
-                  disabled={selectedCase.status !== 'open'} 
-                  className="px-4 py-2 bg-[#F2B35D] hover:bg-[#F4C584] text-[#080B0E] font-bold rounded text-xs transition-colors disabled:opacity-50"
-                >
-                  Cảnh báo Nạn nhân
-                </button>
-                <button 
-                  onClick={() => dispatch({ type: 'OPERATIONAL_ACTION', payload: { caseId: selectedCase.id, action: 'frozen' } })}
-                  disabled={selectedCase.status !== 'open'} 
-                  className="px-4 py-2 bg-[#45D6BF] hover:bg-[#6DA8FF] text-[#080B0E] font-bold rounded text-xs transition-colors disabled:opacity-50"
-                >
-                  Đóng băng Tài khoản
-                </button>
-                <button 
-                  onClick={() => dispatch({ type: 'OPERATIONAL_ACTION', payload: { caseId: selectedCase.id, action: 'banned' } })}
-                  disabled={selectedCase.status !== 'open'} 
-                  className="px-4 py-2 bg-[#FF5A5F] hover:bg-[#FF7A7F] text-[#080B0E] font-bold rounded text-xs transition-colors disabled:opacity-50"
-                >
-                  Chuyển hồ sơ Cảnh sát
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+       )}
     </div>
   );
 }

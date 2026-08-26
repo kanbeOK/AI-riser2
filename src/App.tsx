@@ -37,7 +37,7 @@ function GameRoot() {
   // Time loop
   useEffect(() => {
     let interval: any;
-    if (state.status === 'playing' && state.speed > 0) {
+    if (state.status === 'playing' && state.speed !== undefined && state.speed > 0) {
       interval = setInterval(() => {
         dispatch({ type: 'TICK', payload: { minutes: 1 } });
       }, 1000 / state.speed);
@@ -48,7 +48,7 @@ function GameRoot() {
   // Pause on blur
   useEffect(() => {
     const handleBlur = () => {
-      if (state.status === 'playing' && state.speed > 0) {
+      if (state.status === 'playing' && state.speed !== undefined && state.speed > 0) {
         dispatch({ type: 'SET_SPEED', payload: { speed: 0 } });
       }
     };
