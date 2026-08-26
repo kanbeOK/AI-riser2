@@ -1,108 +1,80 @@
-import React from 'react';
+import React, { useReducer, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router';
-import { GameShell } from './components/game/GameShell';
+import { gameReducer, INITIAL_STATE } from './game/state/reducer';
+import { CampaignState, GameAction } from './game/state/types';
+import { Apartment } from './components/apartment/Apartment';
+import { Workstation } from './components/desktop/Workstation';
 
 function IntroScreen() {
   return (
     <div className="min-h-screen bg-[#071018] text-white flex flex-col items-center justify-center p-6 text-center">
-      <h1 className="text-6xl md:text-8xl font-black font-serif tracking-tighter mb-6 text-white drop-shadow-md">PHANH! 24H</h1>
-      <p className="font-serif italic text-2xl md:text-3xl text-gray-400 mb-4">Giữ ví. Giữ danh tính. Giữ người thân.</p>
+      <h1 className="text-6xl md:text-8xl font-black font-serif tracking-tighter mb-6 text-white drop-shadow-md">PHANH! // MẮT LƯỚI</h1>
+      <p className="font-serif italic text-2xl md:text-3xl text-gray-400 mb-4">CA TRỰC 00:00</p>
       <p className="font-sans text-sm tracking-widest uppercase opacity-60 mb-16 max-w-xl leading-relaxed">
-        Bạn có an toàn đến 00:00?
+        Một ca trực. Sáu đường dây. Tiền nhà đến hạn.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 mb-16">
-        <Link to="/game?mode=solo" className="bg-red-600 text-white px-8 py-4 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-red-700 transition-colors">
-          Chơi một mình
+        <Link to="/game?mode=solo" className="bg-[#45D6BF] text-[#080B0E] px-8 py-4 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-teal-400 transition-colors">
+          Bắt đầu ca trực
         </Link>
-        <Link to="/game?mode=squad" className="border border-white/20 text-white px-8 py-4 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-white/10 transition-colors">
-          Chơi cùng gia đình
+        <Link to="/game?mode=demo" className="border border-white/20 text-white px-8 py-4 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-white/10 transition-colors">
+          Trình diễn 90 giây
         </Link>
       </div>
-      <div className="flex gap-4">
-        <Link to="/game?demo=true" className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity p-2">Trình diễn 90 giây</Link>
-      </div>
-      <div className="mt-16 flex gap-6">
-        <Link to="/case-board" className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity">Phòng giám định</Link>
-        <Link to="/profile" className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity">Hồ sơ</Link>
-        <Link to="/about" className="text-xs uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity">Thông tin</Link>
-      </div>
+      <div className="text-xs uppercase tracking-widest opacity-40">MÔ PHỎNG AN TOÀN — KHÔNG GIÁM SÁT HOẶC GIAO DỊCH THẬT</div>
     </div>
   );
 }
 
-function ForensicsScreen() {
-  return (
-    <div className="min-h-screen bg-[#071018] text-white flex flex-col">
-      <header className="p-6 border-b border-white/10 flex justify-between items-center bg-[#0D1922]">
-        <Link to="/" className="text-2xl font-black font-serif tracking-tighter text-white">PHANH! 24H</Link>
-        <Link to="/" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white">Thoát</Link>
-      </header>
-      <div className="flex-1 overflow-auto p-6 max-w-7xl mx-auto w-full">
-        <h1 className="text-2xl font-bold mb-6">Hồ sơ chuyên án</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-           <div className="p-6 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-colors cursor-pointer">
-             <h3 className="font-bold text-lg mb-2 text-white">Mã QR giao hàng</h3>
-             <p className="text-sm text-gray-400">Đã giải quyết</p>
-           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+function GameRoot() {
+  const [state, dispatch] = useReducer(gameReducer, INITIAL_STATE);
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    dispatch({ type: 'START_CAMPAIGN', payload: { mode: params.get('mode') === 'demo' ? 'demo' : 'solo' } });
+  }, []);
 
-function ProfileScreen() {
-  return (
-    <div className="min-h-screen bg-[#071018] text-white flex flex-col">
-      <header className="p-6 border-b border-white/10 flex justify-between items-center bg-[#0D1922]">
-        <Link to="/" className="text-2xl font-black font-serif tracking-tighter text-white">PHANH! 24H</Link>
-        <Link to="/" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white">Thoát</Link>
-      </header>
-      <div className="flex-1 overflow-auto p-6 max-w-4xl mx-auto w-full">
-        <h1 className="text-3xl font-bold mb-8 font-serif">Hồ sơ cá nhân</h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-           <div className="p-6 bg-white/5 rounded-xl border border-white/10">
-             <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Cấp bậc</div>
-             <div className="text-3xl font-bold text-blue-400">Tân binh</div>
-           </div>
-           <div className="p-6 bg-white/5 rounded-xl border border-white/10">
-             <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Điểm cao nhất</div>
-             <div className="text-3xl font-bold text-green-400">8,500</div>
-           </div>
-           <div className="p-6 bg-white/5 rounded-xl border border-white/10">
-             <div className="text-sm text-gray-400 uppercase tracking-widest mb-2">Huy hiệu</div>
-             <div className="text-3xl font-bold text-yellow-400">2</div>
-           </div>
-        </div>
-        <h2 className="text-xl font-bold mb-4 font-serif">Bảng xếp hạng trên thiết bị</h2>
-        <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
-           <div className="p-4 border-b border-white/10 flex justify-between text-sm text-gray-400 uppercase tracking-widest">
-             <span>Người chơi</span>
-             <span>Điểm</span>
-           </div>
-           <div className="p-4 flex justify-between text-white border-b border-white/5">
-             <span>Player 1</span>
-             <span className="font-bold">8,500</span>
-           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+  // Time loop
+  useEffect(() => {
+    let interval: any;
+    if (state.status === 'playing' && state.speed > 0) {
+      interval = setInterval(() => {
+        dispatch({ type: 'TICK', payload: { minutes: 1 } });
+      }, 1000 / state.speed);
+    }
+    return () => clearInterval(interval);
+  }, [state.status, state.speed]);
+  
+  // Pause on blur
+  useEffect(() => {
+    const handleBlur = () => {
+      if (state.status === 'playing' && state.speed > 0) {
+        dispatch({ type: 'SET_SPEED', payload: { speed: 0 } });
+      }
+    };
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, [state.status, state.speed]);
 
-function AboutScreen() {
-  return (
-    <div className="min-h-screen bg-[#071018] text-white p-8 md:p-16">
-      <Link to="/" className="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-white mb-8 block">&larr; Trở lại</Link>
-      <div className="max-w-3xl mx-auto space-y-8">
-        <h1 className="text-4xl font-serif font-bold text-white">Thông tin dự án</h1>
-        <p className="text-gray-400 leading-relaxed text-lg">
-          PHANH! 24H - Giữ ví. Giữ danh tính. Giữ người thân.
-          <br/><br/>
-          Tất cả dữ liệu mô phỏng dựa trên nguồn chính thống.
-        </p>
+  if (state.status === 'debrief') {
+    return (
+      <div className="min-h-screen bg-[#071018] text-white flex flex-col items-center justify-center p-8">
+        <h1 className="text-4xl font-bold mb-8">Báo cáo kết thúc</h1>
+        <div className="text-gray-400 mb-8 max-w-lg text-center">
+          {state.endingsUnlocked.includes('e_nguoi_tot_khong_nha') && "Bạn đã bảo vệ được nhiều người, nhưng lại không thể trả tiền nhà. Bạn bị đuổi khỏi căn hộ."}
+          {state.endingsUnlocked.includes('e_kiet_suc') && "Bạn đã sụp đổ vì kiệt sức. Sức khỏe là vốn quý nhất, đừng bỏ bê nó."}
+          {!state.endingsUnlocked.length && "Ca trực kết thúc."}
+        </div>
+        <Link to="/" className="px-6 py-3 bg-[#45D6BF] text-[#080B0E] font-bold rounded">Về trang chủ</Link>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (state.location === 'apartment') {
+    return <Apartment state={state} dispatch={dispatch} />;
+  }
+
+  return <Workstation state={state} dispatch={dispatch} />;
 }
 
 export default function App() {
@@ -110,10 +82,7 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<IntroScreen />} />
-        <Route path="/game" element={<GameShell />} />
-        <Route path="/case-board" element={<ForensicsScreen />} />
-        <Route path="/profile" element={<ProfileScreen />} />
-        <Route path="/about" element={<AboutScreen />} />
+        <Route path="/game" element={<GameRoot />} />
       </Routes>
     </Router>
   );

@@ -27,5 +27,5 @@ export function cyrb128(str: string) {
 
 export function createSeededRandom(seedString: string) {
     const seed = cyrb128(seedString);
-    return mulberry32(seed[0]);
+    return mulberry32(seed[0] || 0);
 }
